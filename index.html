@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Obras JACOMAR</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&display=swap">
+<style>
+/* Layout: barra fixa com a escolha da obra; carteira de obras como página inicial; cada obra abre em custos (target, centros de custo, notas por mês), avanço físico quando houver etapas, e pendências. */
+:root {
+  --bg: #0b0b0b;
+  --panel: #171717;
+  --fg: #ffffff;
+  --muted: #b3b3b3;
+  --line: #333333;
+  --grid: #262626;
+  --accent: #ffed00;
+  --accent-soft: #3a3600;
+  --plan: #8a8a8a;
+  --fin: #6fb0d2;
+  --ok: #5cc98a;
+  --warn: #ffb547;
+  --bad: #ff4d52;
+  --brand-red: #e31e24;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --r: 8px;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0b0b0b; --panel: #171717; --fg: #ffffff; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #0b0b0b; --panel: #171717; --fg: #ffffff; color-scheme: dark; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 1200px; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line); }
+.bar .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding-block: 10px; }
+.brand { font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .02em; text-transform: uppercase; background: none; border: 0; color: var(--fg); cursor: pointer; padding: 0; }
+.brand { display: inline-flex; align-items: center; gap: 10px; }
+.brand img { display: block; height: 40px; width: auto; }
+.brand span { color: var(--accent); }
+.bar { border-bottom: 3px solid var(--accent); background: #000; }
+select, input, button { font: inherit; color: inherit; }
+select, input[type="text"], input[type="date"], input[type="number"], input[type="month"] { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-width: 0; }
+button { cursor: pointer; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); padding: 6px 12px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+button.danger { color: var(--bad); border-color: var(--bad); background: transparent; }
+button.ghost { background: transparent; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+main { padding-block: 24px 48px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h1 { font-family: var(--display); font-weight: 600; font-size: clamp(28px, 4vw, 40px); line-height: 1.05; }
+h2 { font-size: 17px; font-weight: 600; }
+h3 { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.note { color: var(--muted); font-size: 13px; margin: 0; }
+.head { display: grid; gap: 6px; }
+.head .row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; }
+.tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; border: 1px solid currentColor; border-radius: 999px; padding: 1px 9px; white-space: nowrap; }
+.tag.bad { color: var(--bad); } .tag.warn { color: var(--warn); } .tag.ok { color: var(--ok); } .tag.muted { color: var(--muted); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 175px), 1fr)); gap: 12px; }
+.kpi .lbl { font-size: 13px; color: var(--muted); }
+.kpi .big { font-family: var(--display); font-weight: 600; font-size: 38px; line-height: 1; font-variant-numeric: tabular-nums; }
+.kpi .sub { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.kpi .sub b { color: var(--fg); font-weight: 600; }
+.meter { position: relative; height: 8px; background: var(--grid); border-radius: 4px; }
+.meter i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--accent); max-width: 100%; }
+.meter s { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--fg); }
+.c-bad { color: var(--bad); } .c-ok { color: var(--ok); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 12px; }
+.chart { position: relative; min-height: 240px; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart text { font-family: var(--body); font-size: 12px; fill: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.legend i.line { height: 0; width: 16px; border-top: 2px solid; border-radius: 0; }
+.tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.5); white-space: nowrap; font-variant-numeric: tabular-nums; z-index: 2; }
+.tip .d { color: var(--muted); }
+.cardhead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { font-size: 13px; padding: 3px 11px; border-radius: 999px; color: var(--muted); background: transparent; }
+.chips button[aria-pressed="true"] { color: var(--fg); border-color: var(--fg); }
+.tbox { overflow-x: auto; }
+.tbox.tall { max-height: 34rem; overflow-y: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 14px; }
+th { text-align: left; font-weight: 500; font-size: 12px; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; position: sticky; top: 0; background: var(--panel); }
+td { padding: 7px 8px; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+tr.grp td { font-weight: 600; background: var(--bg); }
+tr.tot td { font-weight: 600; border-top: 1px solid var(--line); }
+tr.neg td { color: var(--muted); }
+tr.late td:first-child { box-shadow: inset 3px 0 0 var(--bad); }
+td input { width: 100%; }
+td input[type="number"] { width: 7em; text-align: right; }
+td input.money { width: 9.5em; }
+td input[type="date"] { width: 9.5em; }
+td input.name { min-width: 13em; }
+.hb { display: grid; grid-template-columns: minmax(70px, 1fr) 5.2em; gap: 8px; align-items: center; min-width: 170px; }
+.hb .meter { height: 10px; background: transparent; }
+.hb .meter i { border-radius: 3px; }
+.cellbar { display: grid; grid-template-columns: 3.4em minmax(70px, 1fr); gap: 8px; align-items: center; min-width: 150px; }
+.cellbar .meter { height: 6px; }
+.detail { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.portfolio { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+.ob { text-align: left; display: grid; gap: 12px; padding: 18px; border-radius: var(--r); background: var(--panel); border: 1px solid var(--line); }
+.ob:hover { border-color: var(--accent); }
+.ob .t { font-family: var(--display); font-size: 24px; font-weight: 600; line-height: 1.1; }
+.ob .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 13px; color: var(--muted); }
+.ob .stats b { display: block; font-family: var(--display); font-size: 24px; color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+.ob .stats b.c-bad { color: var(--bad); }
+.form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+.form label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.check { display: flex; gap: 8px; align-items: center; color: var(--fg); font-size: 14px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.editbar { position: sticky; bottom: env(safe-area-inset-bottom, 0px); background: var(--accent-soft); border: 1px solid var(--accent); border-radius: var(--r); padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; z-index: 3; }
+.editbar .sp { flex: 1; }
+.msg { font-size: 13px; color: var(--muted); }
+.msg.err { color: var(--bad); }
+.empty { padding: 28px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: var(--r); }
+.pend-late { color: var(--bad); font-weight: 500; }
+.card > *, main > * > * { min-width: 0; }
+td span.pend-late, td.nowrap { white-space: nowrap; }
+.prazo { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 24px; align-items: center; border-left: 4px solid var(--ok); }
+.prazo.late { border-left-color: var(--bad); }
+@media (max-width: 760px) { .prazo { grid-template-columns: minmax(0, 1fr); } }
+.prazo-left, .prazo-right { display: grid; gap: 12px; min-width: 0; }
+.area { display: inline-flex; justify-self: start; width: fit-content; align-items: baseline; gap: 8px; margin: 2px 0 4px; padding: 6px 14px; border-radius: 6px; background: var(--accent); color: var(--bg); }
+.area b { font-family: var(--display); font-size: 34px; font-weight: 700; line-height: 1.1; }
+.area span { font-size: 14px; }
+.prazo.done { border-left-color: var(--ok); grid-template-columns: minmax(0, 1fr); }
+.prazo.done .cv { color: var(--ok); }
+.prazo.done .clock { grid-template-columns: auto; justify-content: start; }
+.prazo.done .cu { padding: 8px 16px; }
+.clock-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.clock-title { font-size: 14px; color: var(--muted); }
+.clock { display: grid; grid-template-columns: repeat(4, minmax(0, 88px)); gap: 10px; }
+.cu { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 4px; min-width: 0; text-align: center; }
+.cv { font-family: var(--display); font-weight: 600; font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
+.prazo.late .cv { color: var(--bad); }
+.cl { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.cmp { display: grid; gap: 6px; }
+.cmp-l { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.cmp-l b { font-variant-numeric: tabular-nums; }
+.ob .when { font-size: 13px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs button { flex: none; border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: transparent; padding: 10px 14px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.tabs button[aria-current="page"] { color: var(--fg); border-bottom-color: var(--accent); }
+.sortbtn { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+th.num .sortbtn { text-align: right; }
+td.wide { min-width: 15em; }
+.filters select { max-width: 100%; }
+.sources { overflow-wrap: anywhere; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+@media (max-width: 640px) { .hide-sm { display: none; } .kpi .big { font-size: 32px; } }
+.login { max-width: 380px; margin: 40px auto; display: grid; gap: 12px; }
+.login h2 { margin: 0; }
+.login label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+</style>
+
+<header class="bar">
+  <div class="wrap">
+    <button class="brand" id="home" type="button" aria-label="Obras Jacomar, voltar para a lista"><img src="data:image/png;base64,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" alt="" width="92" height="40"><span>Obras</span></button>
+    <label style="flex:1;display:flex;gap:8px;align-items:center;min-width:0">
+      <span class="note hide-sm">Obra</span>
+      <select id="pick" aria-label="Escolher obra" style="max-width:100%"></select>
+    </label>
+    <button id="newBtn" type="button" hidden>Nova obra</button>
+    <button id="editBtn" type="button" class="primary" hidden>Atualizar dados</button>
+  </div>
+</header>
+
+<main class="wrap" id="app">
+  <div class="empty">Carregando obras…</div>
+</main>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="supabase-shim.js"></script>
+<script>
+(() => {
+  const app = document.getElementById('app');
+  const pick = document.getElementById('pick');
+  const newBtn = document.getElementById('newBtn');
+  const editBtn = document.getElementById('editBtn');
+  let db = null, canWrite = false;
+  let obras = new Map();
+  let current = null, mode = 'view', draft = null;
+  let fEtapas = 'todas', fPend = 'abertas';
+  let msg = { text: '', err: false };
+  let confirmDel = false;
+
+  // ---------- helpers ----------
+  const DAY = 86400000;
+  const today = () => { const d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); };
+  const ms = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : NaN; };
+  const iso = (t) => new Date(t).toISOString().slice(0, 10);
+  const monthKey = (t) => new Date(t).toISOString().slice(0, 7);
+  const n = (x) => { const v = Number(x); return isFinite(v) ? v : 0; };
+  const sum = (arr, f) => (arr || []).reduce((s, x) => s + f(x), 0);
+  const pct = (v) => (v == null || !isFinite(v)) ? '—' : (Math.round(v * 10) / 10).toLocaleString('pt-BR') + '%';
+  const brl = (v) => { v = n(v); const big = Math.abs(v) >= 1e6; return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: big ? 'compact' : 'standard', maximumFractionDigits: big ? 2 : 0 }).format(v); };
+  const brlFull = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(n(v));
+  const dt = (s) => { const t = ms(s); return isNaN(t) ? '—' : new Date(t).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' }).replace(/\./g, ''); };
+  const mStart = (k) => { const m = /^(\d{4})-(\d{2})/.exec(k || ''); return m ? Date.UTC(+m[1], +m[2] - 1, 1) : NaN; };
+  const mlabel = (t) => new Date(t).toLocaleDateString('pt-BR', { month: 'short', timeZone: 'UTC' }).replace('.', '') + '/' + String(new Date(t).getUTCFullYear()).slice(2);
+  const signed = (v) => v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + (Math.round(Math.abs(v) * 10) / 10).toLocaleString('pt-BR');
+  const slug = (s) => (s || 'obra').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'obra';
+  const uid = () => Math.random().toString(36).slice(2, 9);
+  const h = (tag, attrs = {}, ...kids) => {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else if (k === 'text') el.textContent = v;
+      else el.setAttribute(k, v === true ? '' : v);
+    }
+    for (const c of kids.flat()) if (c != null && c !== false) el.append(c instanceof Node ? c : String(c));
+    return el;
+  };
+  const NS = 'http://www.w3.org/2000/svg';
+  const s = (tag, a) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  const stxt = (a, t) => { const e = s('text', a); e.textContent = t; return e; };
+
+  // ---------- calculations ----------
+  const prevPct = (e, t) => {
+    const a = ms(e.inicio), b = ms(e.termino);
+    if (isNaN(a) || isNaN(b)) return null;
+    if (t <= a) return 0; if (t >= b) return 100;
+    return (t - a) / (b - a) * 100;
+  };
+  const situacao = (e, t) => {
+    const p = prevPct(e, t), r = n(e.realizado);
+    if (r >= 100) return 'Concluída';
+    if (p != null && (r < p - 5 || (t > ms(e.termino) && r < 100))) return 'Atrasada';
+    if (r === 0 && !p) return 'Não iniciada';
+    return 'Em andamento';
+  };
+  const grupoDe = (c) => c.grupo || 'Obra';
+  function fisico(o, t = today()) {
+    const cv = (o.curva_fisica || []).filter((x) => isFinite(mStart(x.mes))).sort((a, b) => a.mes.localeCompare(b.mes));
+    if (cv.length) {
+      const med = cv.filter((x) => x.realizado !== '' && x.realizado != null);
+      const last = med[med.length - 1];
+      return { tem: true, curva: true, fr: last ? n(last.realizado) : 0, fp: last ? n(last.previsto) : null, mesRef: last ? last.mes : null, atrasadas: 0,
+        inicio: mStart(cv[0].mes), termino: mStart(cv[cv.length - 1].mes) };
+    }
+    const et = o.etapas || [];
+    const dated = et.filter((e) => prevPct(e, t) != null);
+    const peso = sum(et, (e) => n(e.peso)), pesoD = sum(dated, (e) => n(e.peso));
+    return {
+      tem: et.length > 0,
+      fp: pesoD ? sum(dated, (e) => n(e.peso) * prevPct(e, t)) / pesoD : null,
+      fr: peso ? sum(et, (e) => n(e.peso) * n(e.realizado)) / peso : 0,
+      atrasadas: et.filter((e) => situacao(e, t) === 'Atrasada').length,
+      inicio: Math.min(...et.map((e) => ms(e.inicio)).filter(isFinite)),
+      termino: Math.max(...et.map((e) => ms(e.termino)).filter(isFinite)),
+    };
+  }
+  function custos(o) {
+    const centros = o.centros || [];
+    const grupos = {};
+    for (const c of centros) { const g = grupoDe(c); grupos[g] = (grupos[g] || 0) + n(c.valor); }
+    const lancado = sum(o.mensal, (m) => n(m.lancado)), pago = sum(o.mensal, (m) => n(m.pago));
+    const realizado = (o.categorias || []).length ? sum(o.categorias, (c) => n(c.valor)) : null;
+    return { total: sum(centros, (c) => n(c.valor)), grupos, target: n(o.target) || null, realizado, lancado, pago };
+  }
+  function pend(o, t = today()) {
+    const ab = (o.pendencias || []).filter((p) => p.status !== 'Concluída');
+    return { abertas: ab.length, alta: ab.filter((p) => p.prioridade === 'Alta').length, vencidas: ab.filter((p) => ms(p.prazo) < t).length };
+  }
+
+  // ---------- charts ----------
+  function tipFor(box) { const tip = h('div', { class: 'tip', hidden: true }); box.append(tip); return tip; }
+  function placeTip(box, tip, xFrac) {
+    tip.hidden = false; const bw = box.clientWidth, bx = xFrac * bw, tw = tip.offsetWidth;
+    tip.style.left = Math.max(0, Math.min(bw - tw, bx + 12 + tw > bw ? bx - tw - 12 : bx + 12)) + 'px'; tip.style.top = '6px';
+  }
+  const monthLong = (t) => new Date(t).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+  function drawMensal(box, mensal) {
+    box.replaceChildren();
+    const rows = (mensal || []).filter((m) => isFinite(mStart(m.mes))).map((m) => ({ t: mStart(m.mes), l: n(m.lancado), p: n(m.pago) })).sort((a, b) => a.t - b.t);
+    if (!rows.length) { box.append(h('div', { class: 'empty', text: 'Nenhum lançamento mensal ainda.' })); return; }
+    const W = Math.max(300, box.clientWidth || 600), H = 240, m = { t: 14, r: 10, b: 26, l: 58 };
+    const max = Math.max(...rows.map((r) => Math.max(r.l, r.p)), 1);
+    const step = (W - m.l - m.r) / rows.length, bw = Math.max(2, Math.min(14, step * 0.38));
+    const y = (v) => H - m.b - v / max * (H - m.t - m.b);
+    const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Notas lançadas e valores pagos por mês' });
+    const ticks = [0, .25, .5, .75, 1].map((f) => f * max);
+    for (const v of ticks) { svg.append(s('line', { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: v === 0 ? 'var(--muted)' : 'var(--grid)' })); svg.append(stxt({ x: m.l - 8, y: y(v) + 4, 'text-anchor': 'end' }, brl(v).replace('R$', '').trim())); }
+    const every = Math.max(1, Math.ceil(rows.length / Math.max(2, Math.floor((W - m.l - m.r) / 56))));
+    rows.forEach((r, i) => {
+      const cx = m.l + step * (i + .5);
+      svg.append(s('rect', { x: cx - bw - 1, y: y(r.l), width: bw, height: Math.max(0, y(0) - y(r.l)), rx: 2, fill: 'var(--accent)' }));
+      svg.append(s('rect', { x: cx + 1, y: y(r.p), width: bw, height: Math.max(0, y(0) - y(r.p)), rx: 2, fill: 'var(--fin)' }));
+      if (i % every === 0) svg.append(stxt({ x: cx, y: H - 6, 'text-anchor': 'middle' }, mlabel(r.t)));
+    });
+    const hl = s('rect', { y: m.t, height: H - m.t - m.b, width: step, fill: 'var(--fg)', opacity: 0 }); svg.insertBefore(hl, svg.firstChild);
+    const hit = s('rect', { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: 'transparent' }); svg.append(hit);
+    box.append(svg); const tip = tipFor(box);
+    hit.addEventListener('pointermove', (ev) => {
+      const b = svg.getBoundingClientRect(); const px = (ev.clientX - b.left) / b.width * W;
+      const i = Math.max(0, Math.min(rows.length - 1, Math.floor((px - m.l) / step))); const r = rows[i];
+      hl.setAttribute('x', m.l + step * i); hl.setAttribute('opacity', .05);
+      tip.replaceChildren(h('div', { class: 'd', text: monthLong(r.t) }), h('div', { text: 'Lançado ' + brlFull(r.l) }), h('div', { text: 'Pago ' + brlFull(r.p) }));
+      placeTip(box, tip, (m.l + step * (i + .5)) / W);
+    });
+    hit.addEventListener('pointerleave', () => { tip.hidden = true; hl.setAttribute('opacity', 0); });
+  }
+
+  function fisicoPts(o) {
+    const f = fisico(o);
+    if (f.curva) return (o.curva_fisica || []).filter((x) => isFinite(mStart(x.mes))).sort((a, b) => a.mes.localeCompare(b.mes))
+      .map((x) => ({ key: x.mes, t: mStart(x.mes), fp: x.previsto === '' || x.previsto == null ? null : n(x.previsto), fr: x.realizado === '' || x.realizado == null ? null : n(x.realizado) }));
+    if (!isFinite(f.inicio) || !isFinite(f.termino)) return null;
+    const pts = []; const d = new Date(f.inicio); let y = d.getUTCFullYear(), m = d.getUTCMonth();
+    const endKey = monthKey(f.termino), nowKey = monthKey(today());
+    const hist = new Map((o.historico || []).map((x) => [x.mes, n(x.fisico)])); hist.set(nowKey, f.fr);
+    for (let i = 0; i < 120; i++) {
+      const key = monthKey(Date.UTC(y, m, 1));
+      pts.push({ key, t: Date.UTC(y, m, 1), fp: fisico(o, Math.min(Date.UTC(y, m + 1, 0), f.termino)).fp, fr: key <= nowKey && hist.has(key) ? hist.get(key) : null });
+      if (key === endKey) break; m++; if (m > 11) { m = 0; y++; }
+    }
+    return pts;
+  }
+  function drawCurve(box, pts) {
+    box.replaceChildren();
+    if (!pts || !pts.length) { box.append(h('div', { class: 'empty', text: 'Informe as datas das etapas para ver a curva.' })); return; }
+    const W = Math.max(300, box.clientWidth || 600), H = 240, m = { t: 14, r: 46, b: 26, l: 40 };
+    const x = (i) => m.l + (pts.length === 1 ? 0 : i / (pts.length - 1)) * (W - m.l - m.r);
+    const y = (v) => H - m.b - v / 100 * (H - m.t - m.b);
+    const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Curva S física: previsto e realizado acumulados' });
+    for (const v of [0, 25, 50, 75, 100]) { svg.append(s('line', { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: v === 0 ? 'var(--muted)' : 'var(--grid)' })); svg.append(stxt({ x: m.l - 8, y: y(v) + 4, 'text-anchor': 'end' }, v + '%')); }
+    const every = Math.max(1, Math.ceil(pts.length / Math.max(2, Math.floor((W - m.l - m.r) / 64))));
+    pts.forEach((p, i) => { if (i % every === 0) svg.append(stxt({ x: x(i), y: H - 6, 'text-anchor': 'middle' }, mlabel(p.t))); });
+    const path = (k) => { let d = '', on = false; pts.forEach((p, i) => { if (p[k] == null) { on = false; return; } d += (on ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(p[k]).toFixed(1); on = true; }); return d; };
+    svg.append(s('path', { d: path('fp'), fill: 'none', stroke: 'var(--plan)', 'stroke-width': 2, 'stroke-dasharray': '5 4' }));
+    svg.append(s('path', { d: path('fr'), fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+    const real = pts.map((p, i) => [p, i]).filter(([p]) => p.fr != null);
+    if (real.length) { const [lp, li] = real[real.length - 1]; svg.append(s('circle', { cx: x(li), cy: y(lp.fr), r: 4.5, fill: 'var(--accent)' })); svg.append(stxt({ x: x(li) + 8, y: y(lp.fr) + 4, style: 'fill:var(--fg);font-weight:600' }, pct(lp.fr))); }
+    const hit = s('rect', { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: 'transparent' }); svg.append(hit);
+    box.append(svg); const tip = tipFor(box);
+    hit.addEventListener('pointermove', (ev) => {
+      const b = svg.getBoundingClientRect(); const px = (ev.clientX - b.left) / b.width * W;
+      const i = Math.max(0, Math.min(pts.length - 1, Math.round((px - m.l) / ((W - m.l - m.r) / Math.max(1, pts.length - 1))))); const p = pts[i];
+      tip.replaceChildren(h('div', { class: 'd', text: monthLong(p.t) }), h('div', { text: 'Previsto ' + pct(p.fp) }), h('div', { text: 'Realizado ' + (p.fr == null ? 'sem registro' : pct(p.fr)) }));
+      placeTip(box, tip, x(i) / W);
+    });
+    hit.addEventListener('pointerleave', () => { tip.hidden = true; });
+  }
+
+  // ---------- small UI pieces ----------
+  const pillCls = { Atrasada: 'bad', Alta: 'bad', 'Em andamento': 'warn', Média: 'warn', Aberta: 'warn', Concluída: 'ok', 'Não iniciada': 'muted', Baixa: 'muted' };
+  const pill = (t) => h('span', { class: 'tag ' + (pillCls[t] || 'muted'), text: t });
+  const meter = (val, mark, color) => { const mtr = h('div', { class: 'meter' }); const i = h('i'); i.style.width = Math.min(100, Math.max(0, val)) + '%'; if (color) i.style.background = color; mtr.append(i); if (mark != null) { const sm = h('s'); sm.style.left = `calc(${Math.min(100, mark)}% - 1px)`; mtr.append(sm); } return mtr; };
+  const sortedObras = () => [...obras.entries()].sort((a, b) => String(a[1].nome).localeCompare(String(b[1].nome), 'pt-BR'));
+  const chips = (opts, cur, set, label) => h('div', { class: 'chips', role: 'group', 'aria-label': label }, ...opts.map(([k, l]) => h('button', { type: 'button', 'aria-pressed': String(cur === k), onclick: () => { set(k); render(); }, text: l })));
+
+  // generic editable table: cols = [{key,label,type:'text'|'number'|'date'|'month'|'select',cls,options,width}]
+  function editRows(list, cols, blank, addLabel) {
+    const table = h('table');
+    table.append(h('thead', {}, h('tr', {}, ...cols.map((c) => h('th', { class: c.type === 'number' ? 'num' : '', text: c.label })), h('th'))));
+    const tb = h('tbody');
+    list.forEach((row, idx) => {
+      tb.append(h('tr', {}, ...cols.map((c) => {
+        let el;
+        if (c.type === 'select') { el = h('select', { 'aria-label': c.label, onchange: (ev) => { row[c.key] = ev.target.value; } }, ...c.options.map((x) => h('option', { value: x, text: x }))); el.value = row[c.key] || c.options[0]; }
+        else el = h('input', { type: c.type || 'text', class: c.cls || '', value: row[c.key] ?? '', step: c.type === 'number' ? 'any' : null, 'aria-label': c.label, oninput: (ev) => { row[c.key] = c.type === 'number' ? (ev.target.value === '' ? '' : Number(ev.target.value)) : ev.target.value; } });
+        return h('td', { class: c.type === 'number' ? 'num' : '' }, el);
+      }), h('td', {}, h('button', { type: 'button', class: 'ghost', 'aria-label': 'Remover linha', title: 'Remover linha', onclick: () => { list.splice(idx, 1); render(); }, text: '×' }))));
+    });
+    if (!list.length) tb.append(h('tr', {}, h('td', { colspan: cols.length + 1, class: 'note', text: 'Nenhuma linha ainda.' })));
+    table.append(tb);
+    return [h('div', { class: 'tbox' }, table), h('div', { class: 'actions' }, h('button', { type: 'button', onclick: () => { list.push(blank()); render(); }, text: addLabel }))];
+  }
+
+  // ---------- notas (invoices) ----------
+  let tab = 'geral';
+  let notas = { id: null, rows: null, unsub: null };
+  const flt = { q: '', cat: '', st: '', mes: '' };
+  function ensureNotas(id) {
+    if (!db || notas.id === id) return;
+    if (notas.unsub) notas.unsub();
+    notas = { id, rows: null, unsub: null };
+    notas.unsub = db.collection('obras/' + id + '/notas').onSnapshot((snap) => {
+      notas.rows = snap.docs.map((d) => d.data()).sort((a, b) => n(a.ordem) - n(b.ordem)).flatMap((d) => d.rows || []);
+      if (current === id && mode === 'view' && tab !== 'geral') render();
+    }, () => { notas.rows = []; });
+  }
+  const statusNota = (x) => {
+    const v = n(x.v), p = n(x.p);
+    if (p > 0 && (v === 0 || p >= v - 0.5)) return 'Pago';
+    if (p > 0) return 'Pago parcial';
+    if (v === 0) return 'Sem valor';
+    return 'Sem pagamento registrado';
+  };
+  const aberto = (x) => Math.max(0, n(x.v) - n(x.p));
+  const vencida = (x) => statusNota(x) !== 'Pago' && aberto(x) > 0 && ms(x.ve) < today();
+  const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  Object.assign(pillCls, { 'Pago': 'ok', 'Pago parcial': 'warn', 'Sem pagamento registrado': 'bad', 'Sem valor': 'muted' });
+
+  // sortable table that redraws itself inside `box`
+  function dataTable(box, cols, rows, opt = {}) {
+    let sortKey = opt.sort || cols[0].key, dir = opt.dir || 'desc', limit = opt.limit || 200;
+    const draw = () => {
+      const col = cols.find((c) => c.key === sortKey);
+      const val = col.sortVal || ((r) => r[sortKey]);
+      const sorted = rows.slice().sort((a, b) => { const x = val(a), y = val(b); const c = typeof x === 'number' || typeof y === 'number' ? n(x) - n(y) : String(x ?? '').localeCompare(String(y ?? ''), 'pt-BR'); return dir === 'asc' ? c : -c; });
+      const tb = h('tbody');
+      for (const r of sorted.slice(0, limit)) tb.append(h('tr', { class: opt.rowClass ? opt.rowClass(r) : '' }, ...cols.map((c) => { const v = c.cell ? c.cell(r) : c.fmt ? c.fmt(r[c.key], r) : (r[c.key] ?? ''); return h('td', { class: (c.num ? 'num ' : '') + (c.cls || '') }, v === '' ? '—' : v); })));
+      if (!sorted.length) tb.append(h('tr', {}, h('td', { colspan: cols.length, class: 'note', text: opt.empty || 'Nada encontrado com esses filtros.' })));
+      if (opt.total) tb.append(h('tr', { class: 'tot' }, ...cols.map((c, i) => h('td', { class: (c.num ? 'num ' : '') + (c.cls || '') }, i === 0 ? `Total (${sorted.length.toLocaleString('pt-BR')})` : c.total ? c.total(sorted) : ''))));
+      const thead = h('thead', {}, h('tr', {}, ...cols.map((c) => h('th', { class: (c.num ? 'num ' : '') + (c.cls || ''), 'aria-sort': c.key === sortKey ? (dir === 'asc' ? 'ascending' : 'descending') : null },
+        h('button', { type: 'button', class: 'sortbtn', onclick: () => { if (sortKey === c.key) dir = dir === 'asc' ? 'desc' : 'asc'; else { sortKey = c.key; dir = c.num ? 'desc' : 'asc'; } draw(); } }, c.label, c.key === sortKey ? (dir === 'asc' ? ' ↑' : ' ↓') : '')))));
+      box.replaceChildren(h('div', { class: 'tbox tall' }, h('table', {}, thead, tb)));
+      if (sorted.length > limit) box.append(h('div', { class: 'actions' }, h('span', { class: 'note', text: `Mostrando ${limit.toLocaleString('pt-BR')} de ${sorted.length.toLocaleString('pt-BR')}` }), h('button', { type: 'button', onclick: () => { limit += 300; draw(); }, text: 'Mostrar mais' })));
+    };
+    draw();
+  }
+
+  function renderNotas(o) {
+    if (!notas.rows) { app.append(h('div', { class: 'empty', text: 'Carregando notas…' })); return; }
+    if (!notas.rows.length) { app.append(h('div', { class: 'empty', text: 'Nenhuma nota importada para esta obra ainda. Envie a planilha de notas para o Claude incluir aqui.' })); return; }
+    const all = notas.rows;
+    const cats = [...new Set(all.map((x) => x.c).filter(Boolean))].sort();
+    const meses = [...new Set(all.map((x) => x.m).filter(Boolean))].sort();
+    const sts = ['Pago', 'Pago parcial', 'Sem pagamento registrado', 'Sem valor'];
+    const sel = (id, label, cur, opts, fmt, set) => { const s = h('select', { id, 'aria-label': label, onchange: (e) => { set(e.target.value); draw(); } }, h('option', { value: '', text: label }), ...opts.map((x) => h('option', { value: x, text: fmt ? fmt(x) : x }))); s.value = cur; return s; };
+    const q = h('input', { type: 'text', id: 'f-busca', placeholder: 'Buscar fornecedor, NF, romaneio ou serviço', value: flt.q, style: 'flex:1;min-width:min(100%,260px)' });
+    let qt; q.addEventListener('input', () => { clearTimeout(qt); qt = setTimeout(() => { flt.q = q.value; draw(); }, 200); });
+    const filtros = h('div', { class: 'actions filters' }, q,
+      sel('f-cat', 'Todas as categorias', flt.cat, cats, null, (v) => { flt.cat = v; }),
+      sel('f-st', 'Todos os status', flt.st, sts, null, (v) => { flt.st = v; }),
+      sel('f-mes', 'Todos os meses', flt.mes, meses, (m) => mlabel(mStart(m)), (v) => { flt.mes = v; }),
+      h('button', { type: 'button', class: 'ghost', onclick: () => { Object.assign(flt, { q: '', cat: '', st: '', mes: '' }); render(); }, text: 'Limpar filtros' }));
+    const res = h('div', { style: 'display:grid;gap:24px;min-width:0' });
+    app.append(h('section', { class: 'card', id: 'filtros' }, h('div', {}, h('h2', { text: 'Notas e pagamentos' }), h('p', { class: 'note', text: o.nota_notas || 'Cada nota fiscal lançada, com valor, vencimento e o que foi pago.' })), filtros), res);
+    function draw() {
+      const qq = norm(flt.q).trim();
+      const rows = all.filter((x) => (!flt.cat || x.c === flt.cat) && (!flt.st || statusNota(x) === flt.st) && (!flt.mes || x.m === flt.mes) && (!qq || norm([x.f, x.nf, 'romaneio ' + x.r, x.t, x.o].join(' ')).includes(qq)));
+      const tv = sum(rows, (x) => n(x.v)), tp = sum(rows, (x) => n(x.p)), ta = sum(rows, aberto), venc = rows.filter(vencida);
+      const kp = h('section', { class: 'kpis' },
+        h('div', { class: 'card kpi' }, h('div', { class: 'lbl', text: 'Valor das notas' }), h('div', { class: 'big', text: brl(tv) }), h('div', { class: 'sub', text: rows.length.toLocaleString('pt-BR') + ' notas' })),
+        h('div', { class: 'card kpi' }, h('div', { class: 'lbl', text: 'Pago' }), h('div', { class: 'big', text: brl(tp) }), meter(tv ? tp / tv * 100 : 0, null, 'var(--fin)'), h('div', { class: 'sub' }, h('b', { text: pct(tv ? tp / tv * 100 : null) }), ' do valor das notas')),
+        h('div', { class: 'card kpi' }, h('div', { class: 'lbl', text: 'Sem pagamento registrado' }), h('div', { class: 'big', text: brl(ta) }), h('div', { class: 'sub', text: rows.filter((x) => aberto(x) > 0 && statusNota(x) !== 'Pago').length.toLocaleString('pt-BR') + ' notas com saldo' })),
+        h('div', { class: 'card kpi' }, h('div', { class: 'lbl', text: 'Vencidas sem pagamento' }), h('div', { class: 'big' + (venc.length ? ' c-bad' : ''), text: brl(sum(venc, aberto)) }), h('div', { class: 'sub', text: venc.length.toLocaleString('pt-BR') + ' notas com vencimento já passado' })));
+      // top suppliers
+      const byF = new Map();
+      for (const x of rows) { const k = (x.f || '—').toUpperCase(); const a = byF.get(k) || { f: x.f || '—', v: 0, p: 0, n: 0 }; a.v += n(x.v); a.p += n(x.p); a.n++; byF.set(k, a); }
+      const top = [...byF.values()].sort((a, b) => b.v - a.v).slice(0, 12);
+      const max = Math.max(...top.map((x) => Math.max(x.v, x.p)), 1);
+      const tb = h('tbody');
+      for (const x of top) {
+        const bar = h('div', { class: 'meter', style: 'height:10px' }); const bo = h('i'); bo.style.width = (x.v / max * 100) + '%'; bo.style.background = 'var(--accent)'; bo.style.opacity = '.35';
+        const bp = h('i'); bp.style.width = (Math.min(x.p, x.v || x.p) / max * 100) + '%'; bp.style.background = 'var(--fin)'; bp.style.height = '6px'; bp.style.top = '2px'; bar.append(bo, bp);
+        tb.append(h('tr', { style: 'cursor:pointer', title: 'Filtrar por este fornecedor', onclick: () => { flt.q = x.f; q.value = x.f; draw(); } }, h('td', { text: x.f }), h('td', { class: 'hide-sm', style: 'min-width:160px' }, bar), h('td', { class: 'num', text: brl(x.v) }), h('td', { class: 'num', text: brl(x.p) }), h('td', { class: 'num hide-sm note', text: x.n + (x.n === 1 ? ' nota' : ' notas') })));
+      }
+      const topCard = h('section', { class: 'card', id: 'top-fornecedores' }, h('div', {}, h('h2', { text: 'Maiores fornecedores' + (rows.length !== all.length ? ' no filtro' : '') }), h('p', { class: 'note', text: 'Valor das notas e quanto já foi pago. Clique num fornecedor para ver as notas dele.' })),
+        h('div', { class: 'legend' }, h('span', {}, h('i', { style: 'background:var(--accent);opacity:.35' }), 'Valor das notas'), h('span', {}, h('i', { style: 'background:var(--fin)' }), 'Pago')),
+        h('div', { class: 'tbox' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', { text: 'Fornecedor' }), h('th', { class: 'hide-sm' }), h('th', { class: 'num', text: 'Valor' }), h('th', { class: 'num', text: 'Pago' }), h('th', { class: 'num hide-sm', text: 'Notas' }))), tb)));
+      const tableBox = h('div');
+      const listCard = h('section', { class: 'card', id: 'lista-notas' }, h('div', {}, h('h2', { text: 'Lista de notas' }), h('p', { class: 'note', text: 'Clique no título de uma coluna para ordenar. Vencimento em vermelho: já passou e não há pagamento registrado.' })), tableBox);
+      res.replaceChildren(kp, topCard, listCard);
+      dataTable(tableBox, [
+        { key: 'f', label: 'Fornecedor', cell: (x) => h('span', {}, x.f, x.t || x.o ? h('span', { class: 'detail', text: [x.t, x.o].filter(Boolean).join(' · ') }) : null), cls: 'wide' },
+        { key: 'nf', label: 'NF', cls: 'hide-sm' },
+        { key: 'r', label: 'Romaneio', cls: 'hide-sm', sortVal: (x) => n(x.r) || 9999 },
+        { key: 'c', label: 'Categoria', cls: 'hide-sm' },
+        { key: 've', label: 'Vencimento', fmt: (v, x) => h('span', { class: vencida(x) ? 'pend-late' : '', text: dt(v) }) },
+        { key: 'v', label: 'Valor', num: true, fmt: (v) => brlFull(v), total: (rs) => brlFull(sum(rs, (x) => n(x.v))) },
+        { key: 'p', label: 'Pago', num: true, fmt: (v) => n(v) ? brlFull(v) : '—', total: (rs) => brlFull(sum(rs, (x) => n(x.p))) },
+        { key: 'dp', label: 'Pago em', cls: 'hide-sm', fmt: (v, x) => x.dpt || (v ? dt(v) : '') },
+        { key: 'st', label: 'Status', sortVal: statusNota, cell: (x) => pill(statusNota(x)) },
+      ], rows, { sort: 'v', dir: 'desc', limit: 200, total: true });
+    }
+    draw();
+  }
+
+  function renderFornecedores(o) {
+    const cards = [];
+    if (notas.rows && notas.rows.length) {
+      const byF = new Map();
+      for (const x of notas.rows) { const k = (x.f || '—').toUpperCase(); const a = byF.get(k) || { f: x.f || '—', v: 0, p: 0, n: 0, cats: new Set() }; a.v += n(x.v); a.p += n(x.p); a.n++; if (x.c) a.cats.add(x.c); byF.set(k, a); }
+      const rows = [...byF.values()].map((a) => ({ ...a, a: Math.max(0, a.v - a.p), c: [...a.cats].join(', '), pp: a.v ? a.p / a.v * 100 : null }));
+      const box = h('div'); const qi = h('input', { type: 'text', id: 'f-forn', placeholder: 'Buscar fornecedor', style: 'max-width:320px' });
+      cards.push(h('section', { class: 'card', id: 'fornecedores-notas' }, h('div', {}, h('h2', { text: 'Fornecedores das notas com romaneio' }), h('p', { class: 'note', text: `${rows.length} fornecedores. Valor das notas, pago e saldo sem pagamento registrado.` })), qi, box));
+      const draw = () => { const qq = norm(qi.value); dataTable(box, [
+        { key: 'f', label: 'Fornecedor', cls: 'wide' }, { key: 'c', label: 'Categoria', cls: 'hide-sm' }, { key: 'n', label: 'Notas', num: true, cls: 'hide-sm' },
+        { key: 'v', label: 'Valor', num: true, fmt: brlFull, total: (rs) => brlFull(sum(rs, (x) => x.v)) }, { key: 'p', label: 'Pago', num: true, fmt: brlFull, total: (rs) => brlFull(sum(rs, (x) => x.p)) },
+        { key: 'a', label: 'Sem pagamento', num: true, fmt: (v) => v > 0.5 ? brlFull(v) : '—', total: (rs) => brlFull(sum(rs, (x) => x.a)) }, { key: 'pp', label: '% pago', num: true, cls: 'hide-sm', fmt: pct },
+      ], rows.filter((r) => !qq || norm(r.f).includes(qq)), { sort: 'v', limit: 100, total: true }); };
+      let t0; qi.addEventListener('input', () => { clearTimeout(t0); t0 = setTimeout(draw, 200); }); setTimeout(draw);
+    }
+    if ((o.fornecedores_mobilizado || []).length) {
+      const box = h('div'); const tot = sum(o.fornecedores_mobilizado, (x) => n(x.v));
+      cards.push(h('section', { class: 'card', id: 'mobilizado' }, h('div', {}, h('h2', { text: 'Equipamentos mobilizados por fornecedor' }), h('p', { class: 'note', text: o.nota_mobilizado || 'Notas de equipamentos comprados fora dos romaneios. Sem informação de pagamento na planilha.' })), box));
+      setTimeout(() => dataTable(box, [{ key: 'f', label: 'Fornecedor', cls: 'wide', cell: (x) => h('span', {}, x.f, x.obs ? h('span', { class: 'detail', text: x.obs }) : null) }, { key: 'n', label: 'Notas', num: true }, { key: 'v', label: 'Valor', num: true, fmt: brlFull, total: (rs) => brlFull(sum(rs, (x) => n(x.v))) }, { key: 'sh', label: '% do total', num: true, cls: 'hide-sm', sortVal: (x) => n(x.v), cell: (x) => pct(n(x.v) / tot * 100) }],
+        o.fornecedores_mobilizado, { sort: 'v', limit: 30, total: true }));
+    }
+    if ((o.contratos || []).length) {
+      const box = h('div');
+      cards.push(h('section', { class: 'card', id: 'contratos' }, h('div', {}, h('h2', { text: 'Orçamentos e contratos' }), h('p', { class: 'note', text: 'Propostas e contratos fechados com fornecedores, com o valor de cada um.' })), box));
+      setTimeout(() => dataTable(box, [{ key: 'f', label: 'Fornecedor', cls: 'wide' }, { key: 'esc', label: 'Escopo' }, { key: 'c', label: 'Categoria', cls: 'hide-sm' }, { key: 'v', label: 'Valor', num: true, fmt: brlFull, total: (rs) => brlFull(sum(rs, (x) => n(x.v))) }], o.contratos, { sort: 'v', limit: 100, total: true }));
+    }
+    if ((o.infraestrutura || []).length) {
+      const box = h('div');
+      cards.push(h('section', { class: 'card', id: 'infraestrutura' }, h('div', {}, h('h2', { text: 'Infraestrutura e tecnologia' }), h('p', { class: 'note', text: 'Materiais e equipamentos de TI, CFTV e PDV, com o preço de cada item.' })), box,
+        (o.locacoes || []).length ? h('div', {}, h('h3', { text: 'Contratos mensais', style: 'margin:8px 0' }), h('div', { class: 'tbox' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', { text: 'Fornecedor' }), h('th', { text: 'Tipo' }), h('th', { class: 'num', text: 'Valor mensal' }))),
+          h('tbody', {}, ...o.locacoes.map((x) => h('tr', {}, h('td', { text: x.f }), h('td', { text: x.esc }), h('td', { class: 'num', text: brlFull(x.v) }))), h('tr', { class: 'tot' }, h('td', { text: 'Total por mês' }), h('td'), h('td', { class: 'num', text: brlFull(sum(o.locacoes, (x) => n(x.v))) })))))) : null));
+      setTimeout(() => dataTable(box, [{ key: 'f', label: 'Fornecedor', cls: 'wide' }, { key: 'esc', label: 'Item' }, { key: 'v', label: 'Valor', num: true, fmt: brlFull, total: (rs) => brlFull(sum(rs, (x) => n(x.v))) }], o.infraestrutura, { sort: 'v', limit: 100, total: true }));
+    }
+    if (!cards.length) cards.push(h('div', { class: 'empty', text: notas.rows ? 'Nenhum fornecedor cadastrado para esta obra ainda.' : 'Carregando…' }));
+    app.append(...cards);
+  }
+
+  // ---------- prazo (schedule clock) ----------
+  let tickTimer = null;
+  const localStart = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3], 0, 0, 0).getTime() : NaN; };
+  const localEnd = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3], 23, 59, 59).getTime() : NaN; };
+  const dLong = (s) => { const t = ms(s); return isNaN(t) ? '—' : new Date(t).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' }); };
+  function prazoInfo(o) {
+    const a = localStart(o.inicio), b = localEnd(o.deadline);
+    if (isNaN(b)) return null;
+    const now = Date.now();
+    return { a, b, now, late: now > b, diff: Math.abs(b - now), total: isNaN(a) ? null : (b - a), passado: isNaN(a) ? null : Math.max(0, now - a) };
+  }
+  const daysTxt = (ms_) => { const d = Math.floor(ms_ / DAY); return d.toLocaleString('pt-BR') + (d === 1 ? ' dia' : ' dias'); };
+  function prazoCard(o, f) {
+    const p = prazoInfo(o);
+    if (!p) return null;
+    const fim = localEnd(o.conclusao);
+    if (!isNaN(fim)) {
+      clearInterval(tickTimer);
+      const atraso = Math.round((localStart(o.conclusao) - localStart(o.deadline)) / DAY);
+      const dur = isNaN(p.a) ? null : Math.round((localStart(o.conclusao) - p.a) / DAY) + 1;
+      const box = (v, l) => h('div', { class: 'cu' }, h('div', { class: 'cv', text: v }), h('div', { class: 'cl', text: l }));
+      return h('section', { class: 'card prazo done', id: 'prazo' },
+        h('div', { class: 'prazo-left' },
+          h('div', { class: 'clock-head' }, h('span', { class: 'tag ok', text: 'Obra concluída' }), h('span', { class: 'clock-title', text: atraso > 0 ? `entregue ${atraso} dias após a data prevista` : atraso < 0 ? `entregue ${-atraso} dias antes da data prevista` : 'entregue na data prevista' })),
+          h('div', { class: 'clock' }, dur != null ? box(dur.toLocaleString('pt-BR'), 'dias de obra') : null),
+          h('p', { class: 'note', text: [o.inicio && `Início ${dLong(o.inicio)}`, `Entrega prevista ${dLong(o.deadline)}`, `Concluída em ${dLong(o.conclusao)}`].filter(Boolean).join(' · ') })));
+    }
+    const segs = [['dias', 'd'], ['horas', 'h'], ['min', 'm'], ['seg', 's']].map(([l]) => { const v = h('div', { class: 'cv', text: '—' }); return [v, h('div', { class: 'cu' }, v, h('div', { class: 'cl', text: l }))]; });
+    const head = h('div', { class: 'clock-head' });
+    const clock = h('div', { class: 'clock', role: 'timer', 'aria-live': 'off' }, ...segs.map((s) => s[1]));
+    const card = h('section', { class: 'card prazo' + (p.late ? ' late' : ''), id: 'prazo' });
+    const tempoPct = p.total ? Math.min(100, p.passado / p.total * 100) : null;
+    const left = h('div', { class: 'prazo-left' }, head, clock,
+      h('p', { class: 'note', text: `Início ${dLong(o.inicio)} · Entrega prevista ${dLong(o.deadline)}` + (p.total ? ` · prazo total de ${daysTxt(p.total + 1000)}` : '') }));
+    const right = h('div', { class: 'prazo-right' });
+    if (tempoPct != null) {
+      right.append(h('div', { class: 'cmp' }, h('div', { class: 'cmp-l' }, h('span', { text: 'Tempo decorrido' }), h('b', { text: pct(tempoPct) })), meter(tempoPct, null, p.late ? 'var(--bad)' : 'var(--plan)'),
+        h('div', { class: 'note', text: p.late ? `${daysTxt(p.passado)} desde o início, prazo esgotado` : `${daysTxt(p.passado)} de ${daysTxt(p.total + 1000)}` })));
+      if (f && f.tem) right.append(h('div', { class: 'cmp' }, h('div', { class: 'cmp-l' }, h('span', { text: 'Obra executada' + (f.mesRef ? ' (' + mlabel(mStart(f.mesRef)) + ')' : '') }), h('b', { text: pct(f.fr) })), meter(f.fr, null, 'var(--accent)'),
+        h('div', { class: 'note', text: f.fr + 0.5 < tempoPct ? `Execução ${(tempoPct - f.fr).toLocaleString('pt-BR',{maximumFractionDigits:1})} pontos atrás do tempo decorrido` : 'Execução acompanhando o tempo decorrido' })));
+    }
+    card.append(left, right);
+    const update = (first) => {
+      if (!first && !card.isConnected) { clearInterval(tickTimer); return; }
+      const now = Date.now(), late = now > p.b; let d = Math.abs(p.b - now);
+      const D = Math.floor(d / DAY); d -= D * DAY; const H = Math.floor(d / 3600000); d -= H * 3600000; const M = Math.floor(d / 60000); d -= M * 60000; const S = Math.floor(d / 1000);
+      segs[0][0].textContent = D.toLocaleString('pt-BR'); segs[1][0].textContent = String(H).padStart(2, '0'); segs[2][0].textContent = String(M).padStart(2, '0'); segs[3][0].textContent = String(S).padStart(2, '0');
+      head.replaceChildren(h('span', { class: 'tag ' + (late ? 'bad' : 'ok'), text: late ? 'Prazo vencido' : 'No prazo' }), h('span', { class: 'clock-title', text: late ? 'de atraso desde a data de entrega' : 'para a data de entrega' }));
+      card.classList.toggle('late', late);
+    };
+    update(true);
+    clearInterval(tickTimer); tickTimer = setInterval(() => update(false), 1000);
+    return card;
+  }
+
+  // ---------- rendering ----------
+  function renderBar() {
+    pick.replaceChildren(h('option', { value: '', text: 'Todas as obras' }), ...sortedObras().map(([id, o]) => h('option', { value: id, text: o.nome || id })));
+    pick.value = current && obras.has(current) ? current : '';
+    newBtn.hidden = !canWrite || mode !== 'view';
+    editBtn.hidden = !canWrite || mode !== 'view' || !current;
+    pick.disabled = mode !== 'view';
+  }
+  function render() {
+    renderBar();
+    app.replaceChildren();
+    if (mode === 'new') return renderNew();
+    if (current && obras.has(current)) return renderObra(mode === 'edit' ? draft : obras.get(current));
+    renderCarteira();
+  }
+
+  function renderCarteira() {
+    app.append(h('div', { class: 'head' }, h('div', { class: 'eyebrow', text: 'Carteira de obras' }), h('h1', { text: 'Custo e avanço das obras' }),
+      h('p', { class: 'note', text: 'Escolha uma obra para ver os detalhes ou cadastre uma nova.' })));
+    if (!obras.size) {
+      app.append(h('div', { class: 'empty' }, db ? 'Nenhuma obra cadastrada ainda. ' : 'Não foi possível carregar os dados desta página. ', canWrite ? h('button', { type: 'button', class: 'primary', onclick: startNew, text: 'Cadastrar a primeira obra' }) : ''));
+      return;
+    }
+    const grid = h('div', { class: 'portfolio' });
+    for (const [id, o] of sortedObras()) {
+      const c = custos(o), f = fisico(o), p = pend(o);
+      const over = c.target && c.realizado != null && c.realizado > c.target;
+      grid.append(h('button', { type: 'button', class: 'ob', onclick: () => go(id) },
+        h('div', { class: 'eyebrow', text: o.local || 'Obra' }), h('div', { class: 't', text: o.nome }),
+        (() => { if (o.conclusao) return h('div', { class: 'when c-ok', text: `Concluída em ${dt(o.conclusao)}` }); const pz = prazoInfo(o); return pz ? h('div', { class: 'when ' + (pz.late ? 'c-bad' : 'c-ok'), text: pz.late ? `Entrega prevista em ${dt(o.deadline)}: atrasada há ${daysTxt(pz.diff)}` : `Entrega em ${daysTxt(pz.diff)} (${dt(o.deadline)})` }) : null; })(),
+        h('div', { class: 'stats' },
+          h('div', {}, h('b', { text: brl(c.total) }), 'custo total previsto'),
+          c.realizado != null ? h('div', {}, h('b', { class: over ? 'c-bad' : '', text: brl(c.realizado) }), c.target ? `lançado (${pct(c.realizado / c.target * 100)} do target)` : 'lançado') : h('div', {}, h('b', { text: brl(c.lancado) }), 'lançado'),
+          f.tem ? h('div', {}, h('b', { class: f.fp != null && f.fr < f.fp - 2 ? 'c-bad' : '', text: pct(f.fr) }), 'avanço físico') : h('div', {}, h('b', { text: brl(c.pago) }), 'pago'),
+          h('div', {}, h('b', { class: p.alta ? 'c-bad' : '', text: String(p.abertas) }), 'pendências abertas' + (p.alta ? ` (${p.alta} alta)` : '')))));
+    }
+    app.append(grid);
+  }
+
+  function renderObra(o) {
+    const ed = mode === 'edit';
+    const c = custos(o), f = fisico(o), p = pend(o), t = today();
+
+    // header
+    const head = h('div', { class: 'head', id: 'resumo' });
+    if (ed) {
+      const fld = (label, key, type = 'text') => h('label', {}, label, h('input', { type, id: 'f-' + key, value: o[key] ?? '', step: type === 'number' ? 'any' : null, oninput: (e) => { o[key] = type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value; } }));
+      head.append(h('div', { class: 'form' }, fld('Nome da obra', 'nome'), fld('Local', 'local'), fld('Endereço', 'endereco'), fld('Área (m²)', 'metragem', 'number'), fld('Início', 'inicio', 'date'), fld('Deadline', 'deadline', 'date'), fld('Concluída em', 'conclusao', 'date'),
+        fld('Gerenciadora', 'gerenciadora'), fld('Responsável', 'responsavel'), fld('Target da obra (R$)', 'target', 'number'), fld('Último relatório', 'relatorio')));
+    } else {
+      head.append(h('div', { class: 'eyebrow', text: [o.local, o.gerenciadora, o.responsavel && 'Resp. ' + o.responsavel].filter(Boolean).join(' · ') || 'Obra' }), h('h1', { text: o.nome }));
+      if (o.metragem) head.append(h('div', { class: 'area' }, h('b', { text: n(o.metragem).toLocaleString('pt-BR') }), h('span', { text: 'm² de área construída' })));
+      head.append(h('p', { class: 'note', text: [o.relatorio && 'Último relatório: ' + o.relatorio, o.atualizado_em && 'Dados atualizados em ' + new Date(o.atualizado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })].filter(Boolean).join(' · ') }));
+    }
+    app.append(head);
+    if (!ed) {
+      const pc = prazoCard(o, f); if (pc) app.append(pc);
+      ensureNotas(current);
+      const tabs = [['geral', 'Visão geral'], ['notas', 'Notas e pagamentos'], ['fornecedores', 'Fornecedores e contratos']];
+      app.append(h('nav', { class: 'tabs', 'aria-label': 'Seções da obra' }, ...tabs.map(([k, l]) => h('button', { type: 'button', 'aria-current': tab === k ? 'page' : null, onclick: () => { tab = k; render(); }, text: l }))));
+      if (tab === 'notas') return renderNotas(o);
+      if (tab === 'fornecedores') return renderFornecedores(o);
+    }
+
+    // KPIs
+    const k = [];
+    if (f.tem) { const dv = f.fp == null ? null : f.fr - f.fp; k.push(h('div', { class: 'card kpi' }, h('div', { class: 'lbl', text: 'Avanço físico' + (f.mesRef ? ' em ' + mlabel(mStart(f.mesRef)) : '') }), h('div', { class: 'big', text: pct(f.fr) }), meter(f.fr, f.fp, dv != null && dv < -5 ? 'var(--bad)' : null),
+      h('div', { class: 'sub' }, 'Previsto ', h('b', { text: pct(f.fp) }), ' · ', h('span', { class: dv != null && dv < -2 ? 'c-bad' : dv >= 0 ? 'c-ok' : '', text: signed(dv) + ' pontos' }), f.curva ? '' : ` · ${f.atrasadas} atrasadas`))); }
+    if ((o.orcado_realizado || []).length) {
+      const or = sum(o.orcado_realizado, (x) => n(x.orcado)), re = sum(o.orcado_realizado, (x) => n(x.realizado));
+      k.push(h('div', { class: 'card kpi' }, h('div', { class: 'lbl', text: 'Construção: realizado x orçado' }), h('div', { class: 'big', text: brl(re) }), meter(or ? re / or * 100 : 0, f.tem ? f.fr : null, 'var(--fin)'),
+        h('div', { class: 'sub' }, h('b', { text: pct(or ? re / or * 100 : null) }), ' de ', h('b', { text: brl(or) }), ' · saldo ', h('b', { text: brl(or - re) }))));
+    }
+    k.push(h('div', { class: 'card kpi' }, h('div', { class: 'lbl', text: 'Custo total previsto (obra + operação)' }), h('div', { class: 'big', text: brl(c.total) }),
+      h('div', { class: 'sub' }, ...Object.entries(c.grupos).flatMap(([g, v], i) => [i ? ' · ' : '', g + ' ', h('b', { text: brl(v) })]))));
+    if (c.realizado != null || c.target) {
+      const r = c.realizado ?? c.lancado, share = c.target ? r / c.target * 100 : null;
+      k.push(h('div', { class: 'card kpi' }, h('div', { class: 'lbl', text: 'Lançado até agora' }), h('div', { class: 'big' + (share > 100 ? ' c-bad' : ''), text: brl(r) }),
+        share != null ? meter(share, null, share > 100 ? 'var(--bad)' : null) : null,
+        h('div', { class: 'sub' }, c.target ? ['Target ', h('b', { text: brl(c.target) }), ' · ', h('span', { class: share > 100 ? 'c-bad' : 'c-ok', text: `${pct(share)} (${r > c.target ? brl(r - c.target) + ' acima' : brl(c.target - r) + ' de saldo'})` })] : 'Sem target definido')));
+    }
+    if (c.lancado || c.pago) k.push(h('div', { class: 'card kpi' }, h('div', { class: 'lbl', text: 'Pago das notas com romaneio' }), h('div', { class: 'big', text: brl(c.pago) }), meter(c.lancado ? c.pago / c.lancado * 100 : 0, null, 'var(--fin)'),
+      h('div', { class: 'sub' }, h('b', { text: pct(c.lancado ? c.pago / c.lancado * 100 : null) }), ' de ', h('b', { text: brl(c.lancado) }), ' lançados')));
+    k.push(h('div', { class: 'card kpi' }, h('div', { class: 'lbl', text: 'Pendências abertas' }), h('div', { class: 'big', text: String(p.abertas) }),
+      h('div', { class: 'sub' }, h('b', { text: String(p.alta) }), ' de prioridade alta' + (p.vencidas ? ` · ${p.vencidas} com prazo vencido` : ''))));
+    app.append(h('section', { class: 'kpis', id: 'indicadores' }, k));
+    if (f.tem || ed) app.append(...[].concat(fisicoSection(o, f, ed, t)));
+    if ((o.atividades || []).length || ed) app.append(atividadesCard(o, ed));
+    if ((o.orcado_realizado || []).length || ed) app.append(orcRealCard(o, ed));
+
+    // Charts row: monthly + categories
+    const cm = h('div', { class: 'chart', id: 'chart-mensal' });
+    const row = h('section', { class: 'two', id: 'fluxo' });
+    if (ed) {
+      row.append(h('div', { class: 'card' }, h('h2', { text: 'Notas lançadas e pagas por mês' }), h('p', { class: 'note', text: 'Mês no formato AAAA-MM. Valores em reais.' }),
+        ...editRows(o.mensal ||= [], [{ key: 'mes', label: 'Mês', type: 'month' }, { key: 'lancado', label: 'Lançado R$', type: 'number', cls: 'money' }, { key: 'pago', label: 'Pago R$', type: 'number', cls: 'money' }],
+          () => ({ mes: monthKey(today()), lancado: 0, pago: 0 }), '+ Adicionar mês')));
+      row.append(h('div', { class: 'card' }, h('h2', { text: 'Lançado por categoria' }), h('p', { class: 'note', text: 'Use valores negativos para descontos e duplicidades.' }),
+        ...editRows(o.categorias ||= [], [{ key: 'nome', label: 'Categoria', cls: 'name' }, { key: 'valor', label: 'Valor R$', type: 'number', cls: 'money' }], () => ({ nome: '', valor: 0 }), '+ Adicionar categoria')));
+    } else {
+      row.append(h('div', { class: 'card' }, h('h2', { text: 'Notas lançadas e pagas por mês' }), h('p', { class: 'note', text: o.nota_mensal || 'Valor das notas pelo mês de lançamento e valor pago pelo mês do pagamento.' }),
+        h('div', { class: 'legend' }, h('span', {}, h('i', { style: 'background:var(--accent)' }), 'Lançado'), h('span', {}, h('i', { style: 'background:var(--fin)' }), 'Pago')), cm));
+      row.append(categoriasCard(o, c));
+    }
+    app.append(row);
+    if (!ed) requestAnimationFrame(() => drawMensal(cm, o.mensal));
+
+    app.append(centrosCard(o, c, ed));
+    if ((o.mao_obra || []).length || ed) app.append(maoObraCard(o, ed));
+    app.append(pendCard(o, ed, t));
+    if (!ed && o.fontes) app.append(h('p', { class: 'sources', text: 'Fontes: ' + o.fontes }));
+    if (ed) app.append(editBar());
+  }
+
+  function categoriasCard(o, c) {
+    const card = h('div', { class: 'card', id: 'categorias' }, h('h2', { text: 'Lançado por categoria' }));
+    const cats = (o.categorias || []).slice();
+    if (!cats.length) { card.append(h('div', { class: 'empty', text: 'Nenhuma categoria cadastrada.' })); return card; }
+    card.append(h('p', { class: 'note', text: 'Total líquido de notas, com descontos de duplicidades.' }));
+    const pos = cats.filter((x) => n(x.valor) >= 0).sort((a, b) => n(b.valor) - n(a.valor)), neg = cats.filter((x) => n(x.valor) < 0);
+    const max = Math.max(...pos.map((x) => n(x.valor)), 1), tot = sum(cats, (x) => n(x.valor));
+    const tb = h('tbody');
+    for (const x of pos) tb.append(h('tr', {}, h('td', { text: x.nome }), h('td', {}, h('div', { class: 'hb' }, meter(n(x.valor) / max * 100), h('span', { class: 'num', style: 'text-align:right', text: brl(x.valor) }))), h('td', { class: 'num note', text: pct(n(x.valor) / tot * 100) })));
+    for (const x of neg) tb.append(h('tr', { class: 'neg' }, h('td', { text: x.nome }), h('td', { class: 'num', text: brl(x.valor) }), h('td')));
+    tb.append(h('tr', { class: 'tot' }, h('td', { text: 'Total' }), h('td', { class: 'num', text: brlFull(tot) }), h('td', { class: 'num', text: '100%' })));
+    card.append(h('div', { class: 'tbox' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', { text: 'Categoria' }), h('th', { class: 'num', text: 'Valor' }), h('th', { class: 'num', text: '%' }))), tb)));
+    return card;
+  }
+
+  function centrosCard(o, c, ed) {
+    const card = h('section', { class: 'card', id: 'centros' });
+    card.append(h('div', {}, h('h2', { text: 'Custo previsto por centro de custo' }), h('p', { class: 'note', text: ed ? 'Grupo separa custos da obra e da operação (mobiliário, equipamentos, estoque).' : (o.nota_centros || 'Custo previsto de cada centro de custo, separado entre obra e operação.') })));
+    if (ed) { card.append(...editRows(o.centros ||= [], [{ key: 'nome', label: 'Centro de custo', cls: 'name' }, { key: 'grupo', label: 'Grupo', type: 'select', options: ['Obra', 'Operação'] }, { key: 'valor', label: 'Custo R$', type: 'number', cls: 'money' }], () => ({ id: uid(), nome: '', grupo: 'Obra', valor: 0 }), '+ Adicionar centro de custo')); return card; }
+    const centros = o.centros || [];
+    if (!centros.length) { card.append(h('div', { class: 'empty', text: 'Nenhum centro de custo cadastrado.' })); return card; }
+    const max = Math.max(...centros.map((x) => n(x.valor)), 1);
+    const tb = h('tbody');
+    for (const g of [...new Set(centros.map(grupoDe))]) {
+      const list = centros.filter((x) => grupoDe(x) === g).sort((a, b) => n(b.valor) - n(a.valor));
+      const gt = sum(list, (x) => n(x.valor));
+      tb.append(h('tr', { class: 'grp' }, h('td', { text: g }), h('td', { class: 'num', text: brlFull(gt) }), h('td', { class: 'num', text: pct(gt / c.total * 100) }), h('td', { class: 'num hide-sm', text: '100%' })));
+      for (const x of list) tb.append(h('tr', {}, h('td', { text: x.nome }),
+        h('td', {}, h('div', { class: 'hb' }, meter(n(x.valor) / max * 100, null, g === 'Obra' ? 'var(--accent)' : 'var(--fin)'), h('span', { style: 'text-align:right', text: brl(x.valor) }))),
+        h('td', { class: 'num', text: pct(n(x.valor) / c.total * 100) }), h('td', { class: 'num hide-sm note', text: pct(gt ? n(x.valor) / gt * 100 : null) })));
+    }
+    tb.append(h('tr', { class: 'tot' }, h('td', { text: 'Total obra + operação' }), h('td', { class: 'num', text: brlFull(c.total) }), h('td', { class: 'num', text: '100%' }), h('td', { class: 'hide-sm' })));
+    card.append(h('div', { class: 'tbox tall' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', { text: 'Centro de custo' }), h('th', { class: 'num', text: 'Custo' }), h('th', { class: 'num', text: '% do total' }), h('th', { class: 'num hide-sm', text: '% do grupo' }))), tb)));
+    return card;
+  }
+
+  function atividadesCard(o, ed) {
+    const card = h('section', { class: 'card', id: 'atividades' });
+    card.append(h('div', {}, h('h2', { text: 'Atividades em andamento' }), h('p', { class: 'note', text: ed ? 'Concluído (%) até o último relatório e meta (%) para o mês seguinte.' : (o.nota_atividades || 'Percentual concluído de cada atividade e a meta para o mês seguinte (traço).') })));
+    if (ed) { card.append(...editRows(o.atividades ||= [], [{ key: 'nome', label: 'Atividade', cls: 'name' }, { key: 'concluido', label: 'Concluído %', type: 'number' }, { key: 'meta', label: 'Meta próx. mês %', type: 'number' }, { key: 'obs', label: 'Observação', cls: 'name' }],
+      () => ({ id: uid(), nome: '', concluido: 0, meta: '', obs: '' }), '+ Adicionar atividade')); return card; }
+    const rank = (a) => a.concluido === '' || a.concluido == null ? 1 : n(a.concluido) >= 100 ? 2 : 0;
+    const list = (o.atividades || []).slice().sort((a, b) => rank(a) - rank(b) || n(a.concluido) - n(b.concluido));
+    const tb = h('tbody');
+    for (const a of list) {
+      const has = a.concluido !== '' && a.concluido != null, cc = n(a.concluido), meta = a.meta === '' || a.meta == null ? null : n(a.meta);
+      tb.append(h('tr', {}, h('td', { style: 'min-width:14em' }, a.nome, a.obs ? h('span', { class: 'detail', text: a.obs }) : null),
+        h('td', {}, has ? h('div', { class: 'cellbar' }, h('span', { text: pct(cc) }), meter(cc, meta, cc >= 100 ? 'var(--ok)' : null)) : h('span', { class: 'note', text: 'A iniciar' })),
+        h('td', { class: 'num', text: meta == null ? '—' : pct(meta) })));
+    }
+    card.append(h('div', { class: 'tbox tall' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', { text: 'Atividade' }), h('th', { text: 'Concluído' }), h('th', { class: 'num', text: 'Meta próx. mês' }))), tb)));
+    return card;
+  }
+
+  function orcRealCard(o, ed) {
+    const card = h('section', { class: 'card', id: 'orcado-realizado' });
+    card.append(h('div', {}, h('h2', { text: 'Orçado x realizado da construção' }), h('p', { class: 'note', text: ed ? 'Valores por atividade ou centro de custo da construção.' : (o.nota_orcado || 'Valor orçado e realizado de cada item; desempenho acima de 100% indica estouro.') })));
+    if (ed) { card.append(...editRows(o.orcado_realizado ||= [], [{ key: 'nome', label: 'Item', cls: 'name' }, { key: 'orcado', label: 'Orçado R$', type: 'number', cls: 'money' }, { key: 'realizado', label: 'Realizado R$', type: 'number', cls: 'money' }],
+      () => ({ id: uid(), nome: '', orcado: 0, realizado: 0 }), '+ Adicionar item')); return card; }
+    const list = (o.orcado_realizado || []).slice().sort((a, b) => n(b.orcado) - n(a.orcado));
+    const max = Math.max(...list.map((x) => Math.max(n(x.orcado), n(x.realizado))), 1);
+    const tb = h('tbody');
+    for (const x of list) {
+      const or = n(x.orcado), re = n(x.realizado), d = or ? re / or * 100 : null, over = re > or;
+      const bar = h('div', { class: 'meter', style: 'height:10px' }); const bo = h('i'); bo.style.width = (or / max * 100) + '%'; bo.style.background = 'var(--grid)'; bo.style.boxShadow = 'inset 0 0 0 1px var(--line)';
+      const br = h('i'); br.style.width = (re / max * 100) + '%'; br.style.background = over ? 'var(--bad)' : 'var(--fin)'; br.style.height = '6px'; br.style.top = '2px'; bar.append(bo, br);
+      tb.append(h('tr', {}, h('td', { text: x.nome }), h('td', { class: 'hide-sm', style: 'min-width:140px' }, bar), h('td', { class: 'num', text: brl(or) }), h('td', { class: 'num', text: brl(re) }),
+        h('td', { class: 'num hide-sm' + (over ? ' c-bad' : ''), text: brl(or - re) }), h('td', { class: 'num' + (over ? ' c-bad' : ''), text: pct(d) })));
+    }
+    const tor = sum(list, (x) => n(x.orcado)), tre = sum(list, (x) => n(x.realizado));
+    tb.append(h('tr', { class: 'tot' }, h('td', { text: 'Total' }), h('td', { class: 'hide-sm' }), h('td', { class: 'num', text: brlFull(tor) }), h('td', { class: 'num', text: brlFull(tre) }), h('td', { class: 'num hide-sm', text: brlFull(tor - tre) }), h('td', { class: 'num', text: pct(tor ? tre / tor * 100 : null) })));
+    card.append(h('div', { class: 'legend' }, h('span', {}, h('i', { style: 'background:var(--grid);box-shadow:inset 0 0 0 1px var(--line)' }), 'Orçado'), h('span', {}, h('i', { style: 'background:var(--fin)' }), 'Realizado'), h('span', {}, h('i', { style: 'background:var(--bad)' }), 'Acima do orçado')));
+    card.append(h('div', { class: 'tbox tall' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', { text: 'Item' }), h('th', { class: 'hide-sm' }), h('th', { class: 'num', text: 'Orçado' }), h('th', { class: 'num', text: 'Realizado' }), h('th', { class: 'num hide-sm', text: 'Saldo' }), h('th', { class: 'num', text: 'Desempenho' }))), tb)));
+    return card;
+  }
+
+  function maoObraCard(o, ed) {
+    const card = h('section', { class: 'card', id: 'mao-de-obra' });
+    card.append(h('div', {}, h('h2', { text: 'Mão de obra fixa' + (o.mao_obra_mes ? ' · ' + o.mao_obra_mes : '') }), h('p', { class: 'note', text: 'Equipe fixa da obra e custo mensal.' })));
+    if (ed) { card.append(h('div', { class: 'form' }, h('label', {}, 'Mês de referência', h('input', { type: 'text', id: 'f-momes', value: o.mao_obra_mes || '', oninput: (e) => { o.mao_obra_mes = e.target.value; } }))),
+      ...editRows(o.mao_obra ||= [], [{ key: 'descricao', label: 'Função', cls: 'name' }, { key: 'qtde', label: 'Qtde', type: 'number' }, { key: 'unitario', label: 'Valor unitário R$', type: 'number', cls: 'money' }], () => ({ descricao: '', qtde: 1, unitario: 0 }), '+ Adicionar função')); return card; }
+    const tb = h('tbody');
+    for (const x of o.mao_obra) tb.append(h('tr', {}, h('td', { text: x.descricao }), h('td', { class: 'num', text: String(n(x.qtde)) }), h('td', { class: 'num', text: brlFull(x.unitario) }), h('td', { class: 'num', text: brlFull(n(x.qtde) * n(x.unitario)) })));
+    tb.append(h('tr', { class: 'tot' }, h('td', { text: 'Total do mês' }), h('td', { class: 'num', text: String(sum(o.mao_obra, (x) => n(x.qtde))) }), h('td'), h('td', { class: 'num', text: brlFull(sum(o.mao_obra, (x) => n(x.qtde) * n(x.unitario))) })));
+    card.append(h('div', { class: 'tbox' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', { text: 'Função' }), h('th', { class: 'num', text: 'Qtde' }), h('th', { class: 'num', text: 'Unitário' }), h('th', { class: 'num', text: 'Total' }))), tb)));
+    return card;
+  }
+
+  function fisicoSection(o, f, ed, t) {
+    const sec = h('section', { class: 'card', id: 'etapas' });
+    let curvaEd = null;
+    if (ed) curvaEd = h('section', { class: 'card', id: 'curva-fisica' }, h('div', {}, h('h2', { text: 'Curva S física (mensal)' }), h('p', { class: 'note', text: 'Avanço físico acumulado previsto e realizado por mês, como no relatório da gerenciadora. Deixe o realizado em branco nos meses ainda não medidos. Quando preenchida, ela substitui o cálculo pelas etapas.' })),
+      ...editRows(o.curva_fisica ||= [], [{ key: 'mes', label: 'Mês', type: 'month' }, { key: 'previsto', label: 'Previsto %', type: 'number' }, { key: 'realizado', label: 'Realizado %', type: 'number' }], () => ({ mes: monthKey(today()), previsto: '', realizado: '' }), '+ Adicionar mês'));
+    if (f.curva && !ed) {
+      sec.id = 'curva-fisica';
+      sec.append(h('div', {}, h('h2', { text: 'Curva S física' }), h('p', { class: 'note', text: 'Avanço físico acumulado, previsto e realizado, mês a mês.' })));
+      const cf = h('div', { class: 'chart', id: 'chart-fisico' });
+      sec.append(h('div', { class: 'legend' }, h('span', {}, h('i', { class: 'line', style: 'border-color:var(--plan);border-top-style:dashed' }), 'Previsto'), h('span', {}, h('i', { class: 'line', style: 'border-color:var(--accent)' }), 'Realizado')), cf);
+      requestAnimationFrame(() => drawCurve(cf, fisicoPts(o)));
+      return sec;
+    }
+    sec.append(h('div', { class: 'cardhead' },
+      h('div', {}, h('h2', { text: 'Avanço físico por etapa' }), h('p', { class: 'note', text: ed ? 'Atualize o realizado (%) de cada etapa. O previsto para hoje sai das datas de início e término; o peso define quanto cada etapa conta no total.' : 'Atrasada quando o realizado está mais de 5 pontos abaixo do previsto para hoje, ou passou do término sem concluir.' })),
+      ed ? null : chips([['todas', 'Todas'], ['Atrasada', 'Atrasadas'], ['Em andamento', 'Em andamento']], fEtapas, (k) => { fEtapas = k; }, 'Filtrar etapas')));
+    if (ed) { sec.append(...editRows(o.etapas ||= [], [{ key: 'nome', label: 'Etapa', cls: 'name' }, { key: 'inicio', label: 'Início', type: 'date' }, { key: 'termino', label: 'Término', type: 'date' }, { key: 'peso', label: 'Peso', type: 'number' }, { key: 'realizado', label: 'Realizado %', type: 'number' }],
+      () => ({ id: uid(), nome: '', inicio: iso(today()), termino: iso(today() + 30 * DAY), peso: 1, realizado: 0 }), '+ Adicionar etapa')); return [curvaEd, sec]; }
+    const cf = h('div', { class: 'chart', id: 'chart-fisico' });
+    sec.append(h('div', { class: 'legend' }, h('span', {}, h('i', { class: 'line', style: 'border-color:var(--plan);border-top-style:dashed' }), 'Previsto'), h('span', {}, h('i', { class: 'line', style: 'border-color:var(--accent)' }), 'Realizado')), cf);
+    requestAnimationFrame(() => drawCurve(cf, fisicoPts(o)));
+    const et = o.etapas || [], pesoTot = sum(et, (e) => n(e.peso));
+    const tb = h('tbody');
+    for (const e of et) {
+      const pp = prevPct(e, t), st = situacao(e, t);
+      if (fEtapas !== 'todas' && st !== fEtapas) continue;
+      const late = st === 'Atrasada';
+      tb.append(h('tr', { class: late ? 'late' : '' }, h('td', { text: e.nome }), h('td', { class: 'hide-sm', text: dt(e.inicio) }), h('td', { class: 'hide-sm', text: dt(e.termino) }),
+        h('td', { class: 'num hide-sm', text: pesoTot ? pct(n(e.peso) / pesoTot * 100) : '—' }), h('td', { class: 'num', text: pct(pp) }),
+        h('td', {}, h('div', { class: 'cellbar' }, h('span', { text: pct(n(e.realizado)) }), meter(n(e.realizado), pp > 0 ? pp : null, late ? 'var(--bad)' : null))),
+        h('td', { class: 'num' + (pp != null && n(e.realizado) - pp < -5 ? ' c-bad' : ''), text: pp == null ? '—' : signed(n(e.realizado) - pp) }), h('td', {}, pill(st))));
+    }
+    if (!tb.children.length) tb.append(h('tr', {}, h('td', { colspan: 8, class: 'note', text: 'Nenhuma etapa neste filtro.' })));
+    sec.append(h('div', { class: 'tbox' }, h('table', {}, h('thead', {}, h('tr', {}, ...[['Etapa'], ['Início', 'hide-sm'], ['Término', 'hide-sm'], ['Peso', 'num hide-sm'], ['Previsto hoje', 'num'], ['Realizado'], ['Desvio', 'num'], ['Situação']].map(([l, cl]) => h('th', { class: cl || '', text: l })))), tb)));
+    return sec;
+  }
+
+  function pendCard(o, ed, t) {
+    const card = h('section', { class: 'card', id: 'pendencias' });
+    card.append(h('div', { class: 'cardhead' },
+      h('div', {}, h('h2', { text: 'Pendências' }), h('p', { class: 'note', text: o.nota_pendencias || 'Abertas primeiro, por prioridade e prazo. Prazo em vermelho já venceu.' })),
+      ed ? null : chips([['abertas', 'Em aberto'], ['todas', 'Todas']], fPend, (k) => { fPend = k; }, 'Filtrar pendências')));
+    if (ed) { card.append(...editRows(o.pendencias ||= [], [{ key: 'item', label: 'Pendência', cls: 'name' }, { key: 'detalhe', label: 'O que fazer', cls: 'name' }, { key: 'disciplina', label: 'Tipo' }, { key: 'responsavel', label: 'Responsável' }, { key: 'prazo', label: 'Prazo', type: 'date' }, { key: 'prioridade', label: 'Prioridade', type: 'select', options: ['Alta', 'Média', 'Baixa'] }, { key: 'status', label: 'Status', type: 'select', options: ['Aberta', 'Em andamento', 'Concluída'] }],
+      () => ({ id: uid(), item: '', detalhe: '', responsavel: '', prazo: '', prioridade: 'Média', status: 'Aberta' }), '+ Adicionar pendência')); return card; }
+    const ord = { Alta: 0, Média: 1, Baixa: 2 };
+    const list = (o.pendencias || []).filter((x) => fPend === 'todas' || x.status !== 'Concluída').slice()
+      .sort((a, b) => ((a.status === 'Concluída') - (b.status === 'Concluída')) || ((ord[a.prioridade] ?? 3) - (ord[b.prioridade] ?? 3)) || String(a.prazo || '9').localeCompare(String(b.prazo || '9')));
+    const tb = h('tbody');
+    for (const x of list) {
+      const venc = x.status !== 'Concluída' && ms(x.prazo) < t;
+      tb.append(h('tr', {}, h('td', { style: 'min-width:16em' }, x.item, x.detalhe ? h('span', { class: 'detail', text: x.detalhe }) : null), h('td', { class: 'hide-sm', text: x.disciplina || '—' }), h('td', { class: 'hide-sm', text: x.responsavel || '—' }),
+        h('td', { class: venc ? 'pend-late' : '', text: dt(x.prazo) }), h('td', {}, pill(x.prioridade)), h('td', {}, pill(x.status))));
+    }
+    if (!tb.children.length) tb.append(h('tr', {}, h('td', { colspan: 5, class: 'note', text: (o.pendencias || []).length ? 'Nenhuma pendência em aberto.' : 'Nenhuma pendência cadastrada.' })));
+    card.append(h('div', { class: 'tbox tall' }, h('table', {}, h('thead', {}, h('tr', {}, ...[['Pendência'], ['Tipo', 'hide-sm'], ['Responsável', 'hide-sm'], ['Prazo'], ['Prioridade'], ['Status']].map(([l, cl]) => h('th', { class: cl || '', text: l })))), tb)));
+    return card;
+  }
+
+  function editBar() {
+    return h('div', { class: 'editbar' },
+      h('strong', { text: 'Atualizando dados' }), h('span', { class: 'msg' + (msg.err ? ' err' : ''), text: msg.text || 'As mudanças só valem depois de salvar.' }), h('span', { class: 'sp' }),
+      confirmDel ? h('button', { type: 'button', class: 'danger', onclick: deleteObra, text: 'Confirmar exclusão da obra' }) : h('button', { type: 'button', class: 'danger', onclick: () => { confirmDel = true; render(); }, text: 'Excluir obra' }),
+      h('button', { type: 'button', onclick: cancelEdit, text: 'Cancelar' }),
+      h('button', { type: 'button', class: 'primary', onclick: save, text: 'Salvar' }));
+  }
+
+  // ---------- new obra ----------
+  // Modelo de centros de custo e participação de cada um no custo da obra (estrutura do controle de custos da Borda do Campo, sem terreno e estoque).
+  const CENTROS_PADRAO = [
+    ['Projetos', 'Obra', .4], ['Serviços iniciais / canteiro / locações / documentos', 'Obra', 5.2], ['Terraplanagem + pavimentação', 'Obra', 10.2], ['Fundação', 'Obra', 6.1],
+    ['Superestrutura / cobertura', 'Obra', 31.6], ['Piso de concreto', 'Obra', 4.3], ['Impermeabilização', 'Obra', 1], ['Instalações hidráulicas', 'Obra', 5.5],
+    ['Instalações de incêndio', 'Obra', .8], ['Instalações elétricas', 'Obra', 5.8], ['Vedações / fechamentos / forros', 'Obra', 3.1], ['Esquadrias', 'Obra', 1.2],
+    ['Revestimentos', 'Obra', 4], ['Pintura', 'Obra', 1], ['Serralheria', 'Obra', 1.6], ['ADM e gerenciamento de obras', 'Obra', 5], ['Mão de obra terceirizados', 'Obra', 5.1],
+    ['Contrapartidas', 'Obra', 4.9], ['Climatização ADM', 'Obra', .7], ['Climatização loja', 'Obra', 2], ['Elevador', 'Obra', .5], ['Terreno', 'Obra', 0],
+    ['Mobiliário salão de vendas', 'Operação', 0], ['Comunicação visual', 'Operação', 0], ['Inox setores', 'Operação', 0], ['Refrigeração / gôndolas / porta-paletes', 'Operação', 0],
+    ['Equipamentos padaria / rotisseria', 'Operação', 0], ['Equipamentos açougue / frios', 'Operação', 0], ['Gerador', 'Operação', 0], ['TI / infra / equipamentos', 'Operação', 0],
+    ['CFTV / alarme', 'Operação', 0], ['Marketing', 'Operação', 0], ['Estoque', 'Operação', 0]];
+  const ETAPAS_PADRAO = [['Serviços preliminares', 0, .08, 3], ['Terraplanagem', .03, .15, 8], ['Fundações', .08, .25, 10], ['Estrutura e cobertura', .2, .55, 30], ['Piso de concreto', .45, .6, 5],
+    ['Instalações', .4, .85, 14], ['Vedações e fechamentos', .45, .7, 8], ['Revestimentos e pintura', .65, .9, 9], ['Esquadrias e serralheria', .7, .9, 5], ['Pavimentação externa', .8, .97, 5], ['Limpeza e entrega', .95, 1, 3]];
+  let nf = null;
+  function startNew() { nf = { nome: '', local: '', responsavel: '', inicio: iso(today()), termino: iso(today() + 365 * DAY), target: '', padrao: true }; mode = 'new'; msg = { text: '', err: false }; render(); }
+  function renderNew() {
+    const f = (label, key, type = 'text', extra = {}) => h('label', {}, label, h('input', { type, id: 'n-' + key, value: nf[key], ...extra, oninput: (e) => { nf[key] = e.target.value; } }));
+    app.append(h('div', { class: 'head' }, h('div', { class: 'eyebrow', text: 'Cadastro' }), h('h1', { text: 'Nova obra' })),
+      h('section', { class: 'card' },
+        h('div', { class: 'form' }, f('Nome da obra', 'nome', 'text', { placeholder: 'Ex.: Supermercado Pinheirinho' }), f('Local', 'local', 'text', { placeholder: 'Ex.: Pinheirinho, Curitiba' }), f('Responsável', 'responsavel'),
+          f('Início da obra', 'inicio', 'date'), f('Término previsto', 'termino', 'date'), f('Target da obra (R$)', 'target', 'number', { min: 0, step: 'any' })),
+        h('label', { class: 'check' }, h('input', { type: 'checkbox', id: 'n-padrao', checked: nf.padrao, onchange: (e) => { nf.padrao = e.target.checked; } }), 'Começar com os centros de custo e etapas padrão (o target é distribuído pela participação de cada centro na Borda do Campo; ajuste depois)'),
+        h('div', { class: 'actions' }, h('button', { type: 'button', class: 'primary', onclick: createObra, text: 'Criar obra' }), h('button', { type: 'button', onclick: () => { mode = 'view'; render(); }, text: 'Cancelar' }), h('span', { class: 'msg' + (msg.err ? ' err' : ''), text: msg.text }))));
+  }
+  async function createObra() {
+    const nome = nf.nome.trim();
+    if (!nome) { msg = { text: 'Informe o nome da obra.', err: true }; return render(); }
+    const a = ms(nf.inicio), b = ms(nf.termino);
+    if (isNaN(a) || isNaN(b) || b <= a) { msg = { text: 'O término precisa ser depois do início.', err: true }; return render(); }
+    let id = slug(nome); while (obras.has(id)) id = slug(nome) + '-' + uid().slice(0, 3);
+    const tgt = n(nf.target), shareTot = sum(CENTROS_PADRAO, (x) => x[2]);
+    const doc = {
+      nome, local: nf.local.trim(), responsavel: nf.responsavel.trim(), target: tgt || null,
+      centros: nf.padrao ? CENTROS_PADRAO.map(([nm, g, sh]) => ({ id: uid(), nome: nm, grupo: g, valor: Math.round(tgt * sh / shareTot) })) : [],
+      etapas: nf.padrao ? ETAPAS_PADRAO.map(([nm, s0, e0, peso]) => ({ id: uid(), nome: nm, inicio: iso(a + (b - a) * s0), termino: iso(a + (b - a) * e0), peso, realizado: 0 })) : [],
+      mensal: [], categorias: [], pendencias: [], historico: [], criado_em: new Date().toISOString(), atualizado_em: new Date().toISOString(),
+    };
+    try { await db.collection('obras').doc(id).set(doc); obras.set(id, doc); mode = 'view'; go(id); }
+    catch (e) { msg = { text: errText(e), err: true }; render(); }
+  }
+
+  // ---------- edit / save ----------
+  function startEdit() { draft = structuredClone(obras.get(current)); mode = 'edit'; confirmDel = false; msg = { text: '', err: false }; render(); }
+  function cancelEdit() { draft = null; mode = 'view'; confirmDel = false; render(); }
+  const errText = (e) => e && e.code === 'invalid_argument' ? 'Você não tem permissão para alterar os dados desta página.' : e && e.code === 'quota_exceeded' ? 'O espaço de dados desta página está cheio.' : 'Não foi possível salvar agora. Tente de novo.';
+  async function save() {
+    if (!draft.nome || !String(draft.nome).trim()) { msg = { text: 'Informe o nome da obra.', err: true }; return render(); }
+    for (const e of draft.etapas || []) for (const k of ['peso', 'realizado']) e[k] = n(e[k]);
+    for (const x of draft.centros || []) x.valor = n(x.valor);
+    for (const x of draft.categorias || []) x.valor = n(x.valor);
+    for (const x of draft.mensal || []) { x.lancado = n(x.lancado); x.pago = n(x.pago); }
+    draft.mensal = (draft.mensal || []).sort((a, b) => String(a.mes).localeCompare(String(b.mes)));
+    draft.target = n(draft.target) || null;
+    const blankOr = (v) => v === '' || v == null ? '' : n(v);
+    draft.curva_fisica = (draft.curva_fisica || []).filter((x) => x.mes).map((x) => ({ mes: x.mes, previsto: blankOr(x.previsto), realizado: blankOr(x.realizado) })).sort((a, b) => a.mes.localeCompare(b.mes));
+    for (const x of draft.orcado_realizado || []) { x.orcado = n(x.orcado); x.realizado = n(x.realizado); }
+    for (const x of draft.atividades || []) { x.concluido = blankOr(x.concluido); x.meta = blankOr(x.meta); }
+    for (const x of draft.mao_obra || []) { x.qtde = n(x.qtde); x.unitario = n(x.unitario); }
+    if ((draft.etapas || []).length && !draft.curva_fisica.length) {
+      const key = monthKey(today());
+      draft.historico = (draft.historico || []).filter((x) => x.mes !== key).concat({ mes: key, fisico: Math.round(fisico(draft).fr * 10) / 10 }).sort((a, b) => a.mes.localeCompare(b.mes));
+    }
+    draft.atualizado_em = new Date().toISOString();
+    msg = { text: 'Salvando…', err: false }; render();
+    try { await db.collection('obras').doc(current).set(draft); obras.set(current, draft); draft = null; mode = 'view'; msg = { text: '', err: false }; render(); }
+    catch (e) { msg = { text: errText(e), err: true }; render(); }
+  }
+  async function deleteObra() {
+    try { await db.collection('obras').doc(current).delete(); obras.delete(current); draft = null; mode = 'view'; confirmDel = false; go(null); }
+    catch (e) { msg = { text: errText(e), err: true }; render(); }
+  }
+
+  // ---------- navigation ----------
+  function go(id) {
+    current = id && obras.has(id) ? id : null;
+    try { history.replaceState(null, '', current ? '#' + current : location.pathname + location.search); } catch {}
+    render(); window.scrollTo(0, 0);
+  }
+  pick.addEventListener('change', () => go(pick.value || null));
+  document.getElementById('home').addEventListener('click', () => { if (mode === 'view') go(null); });
+  newBtn.addEventListener('click', startNew);
+  editBtn.addEventListener('click', startEdit);
+  let rz, lastW = window.innerWidth;
+  window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (current && mode === 'view' && window.innerWidth !== lastW) { lastW = window.innerWidth; render(); } }, 200); });
+
+  // ---------- boot ----------
+  (async () => {
+    db = window.claude ? await window.claude.use('db') : null;
+    const user = window.claude ? await window.claude.use('user') : null;
+    if (user) { try { canWrite = (await user.can('data.write')) !== false; } catch { canWrite = true; } } else canWrite = !!db;
+    if (!db) { canWrite = false; render(); return; }
+    const wanted = location.hash.slice(1);
+    let first = true;
+    db.collection('obras').onSnapshot((snap) => {
+      obras = new Map(snap.docs.map((d) => [d.id, d.data()]));
+      if (first) { first = false; if (wanted && obras.has(wanted)) current = wanted; }
+      if (current && !obras.has(current) && mode === 'view') current = null;
+      if (mode !== 'view') { renderBar(); return; }
+      render();
+    }, () => { if (!obras.size) app.replaceChildren(h('div', { class: 'empty', text: 'Não foi possível carregar as obras. Recarregue a página.' })); });
+  })();
+})();
+</script>
+
+</html>
