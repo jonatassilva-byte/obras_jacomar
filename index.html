@@ -155,6 +155,12 @@ td.wide { min-width: 15em; }
 .filters select { max-width: 100%; }
 .sources { overflow-wrap: anywhere; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
 @media (max-width: 640px) { .hide-sm { display: none; } .kpi .big { font-size: 32px; } }
+.setup-erro { max-width: 640px; margin: 40px auto; display: grid; gap: 10px; border-left: 4px solid var(--bad); }
+.setup-erro h2 { margin: 0; }
+.setup-erro p { margin: 0; }
+.setup-code { margin: 0; padding: 10px 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+#sb-aviso { margin-top: 16px; }
+#sb-aviso .sb-aviso-txt { padding: 10px 14px; background: var(--accent-soft); border: 1px solid var(--accent); border-radius: var(--r); color: var(--fg); font-size: 14px; }
 .login { max-width: 380px; margin: 40px auto; display: grid; gap: 12px; }
 .login h2 { margin: 0; }
 .login label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
@@ -176,9 +182,10 @@ td.wide { min-width: 15em; }
   <div class="empty">Carregando obras…</div>
 </main>
 
-<script src="config.js"></script>
+<script>window.addEventListener('error', function (e) { if (e.filename && /config\.js/.test(e.filename)) window.__cfgErro = e.message + ' (linha ' + e.lineno + ')'; });</script>
+<script src="config.js" onerror="window.__cfgFaltando = true"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="supabase-shim.js"></script>
+<script src="supabase-shim.js" onerror="window.__shimFaltando = true"></script>
 <script>
 (() => {
   const app = document.getElementById('app');
@@ -387,9 +394,10 @@ td.wide { min-width: 15em; }
     if (notas.unsub) notas.unsub();
     notas = { id, rows: null, unsub: null };
     notas.unsub = db.collection('obras/' + id + '/notas').onSnapshot((snap) => {
+      notas.erro = false;
       notas.rows = snap.docs.map((d) => d.data()).sort((a, b) => n(a.ordem) - n(b.ordem)).flatMap((d) => d.rows || []);
       if (current === id && mode === 'view' && tab !== 'geral') render();
-    }, () => { notas.rows = []; });
+    }, () => { notas.rows = []; notas.erro = true; if (current === id && mode === 'view' && tab !== 'geral') render(); });
   }
   const statusNota = (x) => {
     const v = n(x.v), p = n(x.p);
@@ -424,7 +432,8 @@ td.wide { min-width: 15em; }
 
   function renderNotas(o) {
     if (!notas.rows) { app.append(h('div', { class: 'empty', text: 'Carregando notas…' })); return; }
-    if (!notas.rows.length) { app.append(h('div', { class: 'empty', text: 'Nenhuma nota importada para esta obra ainda. Envie a planilha de notas para o Claude incluir aqui.' })); return; }
+    if (notas.erro) { app.append(h('div', { class: 'empty', text: 'Não foi possível carregar as notas desta obra (veja o aviso acima). Recarregue a página.' })); return; }
+    if (!notas.rows.length) { app.append(h('div', { class: 'empty', text: 'Nenhuma nota cadastrada para esta obra ainda.' })); return; }
     const all = notas.rows;
     const cats = [...new Set(all.map((x) => x.c).filter(Boolean))].sort();
     const meses = [...new Set(all.map((x) => x.m).filter(Boolean))].sort();
@@ -884,7 +893,7 @@ td.wide { min-width: 15em; }
   // ---------- edit / save ----------
   function startEdit() { draft = structuredClone(obras.get(current)); mode = 'edit'; confirmDel = false; msg = { text: '', err: false }; render(); }
   function cancelEdit() { draft = null; mode = 'view'; confirmDel = false; render(); }
-  const errText = (e) => e && e.code === 'invalid_argument' ? 'Você não tem permissão para alterar os dados desta página.' : e && e.code === 'quota_exceeded' ? 'O espaço de dados desta página está cheio.' : 'Não foi possível salvar agora. Tente de novo.';
+  const errText = (e) => e && e.code === 'invalid_argument' ? 'Você não tem permissão para alterar os dados desta página.' : e && e.code === 'quota_exceeded' ? 'O espaço de dados desta página está cheio.' : (e && e.message) || 'Não foi possível salvar agora. Tente de novo.';
   async function save() {
     if (!draft.nome || !String(draft.nome).trim()) { msg = { text: 'Informe o nome da obra.', err: true }; return render(); }
     for (const e of draft.etapas || []) for (const k of ['peso', 'realizado']) e[k] = n(e[k]);
@@ -919,7 +928,7 @@ td.wide { min-width: 15em; }
     render(); window.scrollTo(0, 0);
   }
   pick.addEventListener('change', () => go(pick.value || null));
-  document.getElementById('home').addEventListener('click', () => { if (mode === 'view') go(null); });
+  document.getElementById('home').addEventListener('click', () => { if (mode === 'view' && db && obras.size) go(null); });
   newBtn.addEventListener('click', startNew);
   editBtn.addEventListener('click', startEdit);
   let rz, lastW = window.innerWidth;
@@ -930,7 +939,17 @@ td.wide { min-width: 15em; }
     db = window.claude ? await window.claude.use('db') : null;
     const user = window.claude ? await window.claude.use('user') : null;
     if (user) { try { canWrite = (await user.can('data.write')) !== false; } catch { canWrite = true; } } else canWrite = !!db;
-    if (!db) { canWrite = false; render(); return; }
+    if (!db) {
+      canWrite = false;
+      if (!window.claude) {
+        pick.closest('label').style.visibility = 'hidden';
+        app.replaceChildren(h('section', { class: 'card setup-erro', role: 'alert' },
+          h('h2', { text: window.__shimFaltando ? 'O arquivo supabase-shim.js não foi encontrado' : 'O arquivo supabase-shim.js não carregou' }),
+          h('p', { text: 'É ele que liga a página ao Supabase e mostra a tela de login. Envie para o GitHub o supabase-shim.js deste pacote, na mesma pasta do index.html e do config.js, com esse nome exato (tudo minúsculo). Envie sempre o index.html e o supabase-shim.js juntos, e espere o Vercel terminar de publicar.' })));
+        return;
+      }
+      render(); return;
+    }
     const wanted = location.hash.slice(1);
     let first = true;
     db.collection('obras').onSnapshot((snap) => {

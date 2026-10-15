@@ -1,6 +1,7 @@
-// Cole aqui os dados do seu projeto Supabase (Project Settings > API).
+// Cole aqui o endereço (Project URL) e a chave publishable (começa com sb_publishable_) do seu projeto Supabase.
+// Cada valor fica entre aspas simples e a linha termina com vírgula.
+// A URL é só o endereço do projeto, terminando em .supabase.co (sem /rest/v1/ no final).
 window.OBRAS_CONFIG = {
-  SUPABASE_URL: 'https://ukgpyojavhhepnhbjzuf.supabase.co/rest/v1/',
-  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrZ3B5b2phdmhoZXBuaGJqenVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwMDExMTgsImV4cCI6MjEwNzU3NzExOH0.a7XzEgxV9YfLwNZT4NBln7BaKqhbYKHrAN-868Jx5SE'
-  
+  SUPABASE_URL: 'https://ukgpyojavhhepnhbjzuf.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_0ZzwJ-02nxY95MU6SHfGzg_TyPpM5Tm',
 };
