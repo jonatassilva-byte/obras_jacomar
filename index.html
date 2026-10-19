@@ -92,6 +92,7 @@ td { padding: 7px 8px; border-bottom: 1px solid var(--grid); vertical-align: mid
 td.num, th.num { text-align: right; white-space: nowrap; }
 tr.grp td { font-weight: 600; background: var(--bg); }
 tr.tot td { font-weight: 600; border-top: 1px solid var(--line); }
+tr.sub td { color: var(--muted); }
 tr.neg td { color: var(--muted); }
 tr.late td:first-child { box-shadow: inset 3px 0 0 var(--bad); }
 td input { width: 100%; }
@@ -690,6 +691,7 @@ td.wide { min-width: 15em; }
 
     app.append(centrosCard(o, c, ed));
     if ((o.mao_obra || []).length || ed) app.append(maoObraCard(o, ed));
+    if ((o.mao_obra_fornecedores || []).length || ed) app.append(maoObraFornCard(o, ed));
     app.append(pendCard(o, ed, t));
     if (!ed && o.fontes) app.append(h('p', { class: 'sources', text: 'Fontes: ' + o.fontes }));
     if (ed) app.append(editBar());
@@ -780,6 +782,30 @@ td.wide { min-width: 15em; }
     for (const x of o.mao_obra) tb.append(h('tr', {}, h('td', { text: x.descricao }), h('td', { class: 'num', text: String(n(x.qtde)) }), h('td', { class: 'num', text: brlFull(x.unitario) }), h('td', { class: 'num', text: brlFull(n(x.qtde) * n(x.unitario)) })));
     tb.append(h('tr', { class: 'tot' }, h('td', { text: 'Total do mês' }), h('td', { class: 'num', text: String(sum(o.mao_obra, (x) => n(x.qtde))) }), h('td'), h('td', { class: 'num', text: brlFull(sum(o.mao_obra, (x) => n(x.qtde) * n(x.unitario))) })));
     card.append(h('div', { class: 'tbox' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', { text: 'Função' }), h('th', { class: 'num', text: 'Qtde' }), h('th', { class: 'num', text: 'Unitário' }), h('th', { class: 'num', text: 'Total' }))), tb)));
+    return card;
+  }
+
+  function maoObraFornCard(o, ed) {
+    const card = h('section', { class: 'card', id: 'mao-de-obra-fornecedores' });
+    card.append(h('div', {}, h('h2', { text: 'Mão de obra por fornecedor' }), h('p', { class: 'note', text: o.nota_mao_obra_fornecedores || 'Valor total de mão de obra contratado com cada fornecedor.' })));
+    if (ed) {
+      card.append(h('div', { class: 'form' }, h('label', {}, 'Observação', h('input', { type: 'text', value: o.nota_mao_obra_fornecedores || '', oninput: (e) => { o.nota_mao_obra_fornecedores = e.target.value; } }))),
+        ...editRows(o.mao_obra_fornecedores ||= [], [{ key: 'fornecedor', label: 'Fornecedor', cls: 'name' }, { key: 'tipo', label: 'Tipo', cls: 'name' }, { key: 'valor', label: 'Valor R$', type: 'number', cls: 'money' }], () => ({ fornecedor: '', tipo: 'Mão de obra específica', valor: '' }), 'Adicionar fornecedor'));
+      return card;
+    }
+    const total = sum(o.mao_obra_fornecedores, (x) => n(x.valor));
+    const obra = sum((o.centros || []).filter((x) => x.grupo !== 'Operação'), (x) => n(x.valor));
+    const tb = h('tbody');
+    const tipos = [...new Set(o.mao_obra_fornecedores.map((x) => x.tipo || ''))];
+    for (const tp of tipos) {
+      const rows = o.mao_obra_fornecedores.filter((x) => (x.tipo || '') === tp);
+      if (tp) tb.append(h('tr', { class: 'grp' }, h('td', { colspan: '3', text: tp })));
+      for (const x of rows) tb.append(h('tr', {}, h('td', { text: x.fornecedor }), h('td', { class: 'num', text: brlFull(x.valor) }), h('td', { class: 'num', text: total ? pct(n(x.valor) / total * 100) : '' })));
+      if (tipos.length > 1) tb.append(h('tr', { class: 'sub' }, h('td', { text: 'Subtotal' }), h('td', { class: 'num', text: brlFull(sum(rows, (x) => n(x.valor))) }), h('td', { class: 'num', text: total ? pct(sum(rows, (x) => n(x.valor)) / total * 100) : '' })));
+    }
+    tb.append(h('tr', { class: 'tot' }, h('td', { text: 'Total de mão de obra' }), h('td', { class: 'num', text: brlFull(total) }), h('td', { class: 'num', text: '100%' })));
+    card.append(h('div', { class: 'tbox' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', { text: 'Fornecedor' }), h('th', { class: 'num', text: 'Valor' }), h('th', { class: 'num', text: '% do total' }))), tb)));
+    if (obra) card.append(h('p', { class: 'note', text: `A mão de obra soma ${pct(total / obra * 100)} do custo da obra (${brl(obra)}).` }));
     return card;
   }
 
@@ -907,6 +933,7 @@ td.wide { min-width: 15em; }
     for (const x of draft.orcado_realizado || []) { x.orcado = n(x.orcado); x.realizado = n(x.realizado); }
     for (const x of draft.atividades || []) { x.concluido = blankOr(x.concluido); x.meta = blankOr(x.meta); }
     for (const x of draft.mao_obra || []) { x.qtde = n(x.qtde); x.unitario = n(x.unitario); }
+    for (const x of draft.mao_obra_fornecedores || []) x.valor = n(x.valor);
     if ((draft.etapas || []).length && !draft.curva_fisica.length) {
       const key = monthKey(today());
       draft.historico = (draft.historico || []).filter((x) => x.mes !== key).concat({ mes: key, fisico: Math.round(fisico(draft).fr * 10) / 10 }).sort((a, b) => a.mes.localeCompare(b.mes));
