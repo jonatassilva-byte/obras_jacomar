@@ -96,7 +96,7 @@ tr.sub td { color: var(--muted); }
 tr.neg td { color: var(--muted); }
 tr.late td:first-child { box-shadow: inset 3px 0 0 var(--bad); }
 td input { width: 100%; }
-td input[type="number"] { width: 7em; text-align: right; }
+td input[type="number"], td input[inputmode="decimal"] { width: 7em; text-align: right; }
 td input.money { width: 9.5em; }
 td input[type="date"] { width: 9.5em; }
 td input.name { min-width: 13em; }
@@ -119,8 +119,47 @@ td input.name { min-width: 13em; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .editbar { position: sticky; bottom: env(safe-area-inset-bottom, 0px); background: var(--accent-soft); border: 1px solid var(--accent); border-radius: var(--r); padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; z-index: 3; }
 .editbar .sp { flex: 1; }
+.nota-form { display: grid; gap: 12px; padding: 14px; background: var(--bg); border: 1px solid var(--accent); border-radius: var(--r); white-space: normal; text-align: left; }
+.nota-form .actions .sp { flex: 1; }
+.nota-form .form input { width: 100%; box-sizing: border-box; text-align: left; }
+tr.form-row > td { padding: 4px 0 14px; }
+tr.mexida > td:first-child { box-shadow: inset 3px 0 0 var(--accent); padding-left: 10px; }
+.tag.mini { font-size: 11px; padding: 0 7px; margin-left: 8px; vertical-align: 1px; }
 .msg { font-size: 13px; color: var(--muted); }
 .msg.err { color: var(--bad); }
+/* edição: campos legíveis, sem vazamento, barra fixa sem cobrir o que está em foco */
+.form label > input, .form label > select { color: var(--fg); font-size: 15px; }
+.nota-form .form input { background: var(--panel); border-color: #4d4d4d; }
+td input, td select { box-sizing: border-box; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+input[aria-invalid="true"] { border-color: var(--bad); box-shadow: 0 0 0 1px var(--bad); }
+.editbar .msg.err { color: #ff8a8d; font-weight: 600; }
+html.editando { scroll-padding-top: 90px; scroll-padding-bottom: 150px; }
+@media (max-width: 640px) {
+  input, select { font-size: 16px; }
+  .form label > input, .form label > select { font-size: 16px; }
+  .editbar { padding: 8px 10px; gap: 6px 8px; }
+  .editbar > strong { display: none; }
+  .editbar .msg { flex: 1 1 100%; }
+  html.editando { scroll-padding-top: 130px; scroll-padding-bottom: 120px; }
+  #lista-notas-edicao thead { display: none; }
+  #lista-notas-edicao table, #lista-notas-edicao tbody, #lista-notas-edicao tr.form-row, #lista-notas-edicao tr.form-row > td { display: block; }
+  #lista-notas-edicao tbody tr:not(.form-row) { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid var(--grid); }
+  #lista-notas-edicao tbody tr:not(.form-row) > td { padding: 0; border: 0; min-width: 0; }
+  #lista-notas-edicao tr.mexida > td:first-child { padding-left: 10px; }
+  #lista-notas-edicao td.wide { grid-column: 1 / 3; grid-row: 1; }
+  #lista-notas-edicao tbody tr > td:last-child:not(:first-child) { grid-column: 3; grid-row: 1; }
+  .nota-form { padding: 12px; }
+  .ed-rows table, .ed-rows tbody { display: block; }
+  .ed-rows thead { display: none; }
+  .ed-rows tbody tr { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; padding: 10px 0; border-bottom: 1px solid var(--grid); }
+  .ed-rows tbody td { display: grid; gap: 2px; padding: 0; border: 0; font-size: 12px; color: var(--muted); text-align: left; }
+  .ed-rows tbody td[data-label]::before { content: attr(data-label); }
+  .ed-rows tbody td:first-child { grid-column: 1 / -1; padding-right: 48px; }
+  .ed-rows tbody td:has(> input.name) { grid-column: 1 / -1; }
+  .ed-rows tbody td:last-child:not([data-label]) { position: absolute; top: 26px; right: 0; }
+  .ed-rows td input, .ed-rows td input.name, .ed-rows td input.money, .ed-rows td input[type="number"], .ed-rows td input[inputmode="decimal"] { width: 100%; min-width: 0; color: var(--fg); text-align: left; }
+}
 .empty { padding: 28px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: var(--r); }
 .pend-late { color: var(--bad); font-weight: 500; }
 .card > *, main > * > * { min-width: 0; }
@@ -368,6 +407,18 @@ td.wide { min-width: 15em; }
   const sortedObras = () => [...obras.entries()].sort((a, b) => String(a[1].nome).localeCompare(String(b[1].nome), 'pt-BR'));
   const chips = (opts, cur, set, label) => h('div', { class: 'chips', role: 'group', 'aria-label': label }, ...opts.map(([k, l]) => h('button', { type: 'button', 'aria-pressed': String(cur === k), onclick: () => { set(k); render(); }, text: l })));
 
+  // valores digitados no formato brasileiro: 1.234,56 · 1234,56 · R$ 1.234 · 1234.56
+  const numBR = (s) => { s = String(s ?? '').replace(/R\$|\s/g, ''); if (s === '') return ''; if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, ''); const v = Number(s); return isFinite(v) ? v : NaN; };
+  const fmtBR = (v) => v === '' || v == null || Number.isNaN(Number(v)) ? '' : Number(v).toLocaleString('pt-BR', { minimumFractionDigits: Number.isInteger(Number(v)) ? 0 : 2, maximumFractionDigits: 2 });
+  // campo numérico: aceita vírgula nos centavos; um valor inválido fica em vermelho, guarda o texto digitado e é barrado ao salvar
+  const bruto = new WeakMap();
+  function numInput(obj, key, attrs = {}, depois) {
+    const raw = (bruto.get(obj) || {})[key];
+    return h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', value: raw ?? fmtBR(obj[key]), 'aria-invalid': raw != null ? 'true' : null, ...attrs,
+      oninput: (e) => { const v = numBR(e.target.value), ruim = Number.isNaN(v), b = bruto.get(obj) || {}; e.target.setAttribute('aria-invalid', String(ruim)); if (ruim) b[key] = e.target.value; else delete b[key]; bruto.set(obj, b); obj[key] = v; if (depois) depois(); } });
+  }
+  const temNaN = (x) => Number.isNaN(x) || (!!x && typeof x === 'object' && Object.values(x).some(temNaN));
+
   // generic editable table: cols = [{key,label,type:'text'|'number'|'date'|'month'|'select',cls,options,width}]
   function editRows(list, cols, blank, addLabel) {
     const table = h('table');
@@ -377,28 +428,32 @@ td.wide { min-width: 15em; }
       tb.append(h('tr', {}, ...cols.map((c) => {
         let el;
         if (c.type === 'select') { el = h('select', { 'aria-label': c.label, onchange: (ev) => { row[c.key] = ev.target.value; } }, ...c.options.map((x) => h('option', { value: x, text: x }))); el.value = row[c.key] || c.options[0]; }
-        else el = h('input', { type: c.type || 'text', class: c.cls || '', value: row[c.key] ?? '', step: c.type === 'number' ? 'any' : null, 'aria-label': c.label, oninput: (ev) => { row[c.key] = c.type === 'number' ? (ev.target.value === '' ? '' : Number(ev.target.value)) : ev.target.value; } });
-        return h('td', { class: c.type === 'number' ? 'num' : '' }, el);
+        else if (c.type === 'number') el = numInput(row, c.key, { class: c.cls || '', 'aria-label': c.label });
+        else el = h('input', { type: c.type || 'text', class: c.cls || '', value: row[c.key] ?? '', 'aria-label': c.label, oninput: (ev) => { row[c.key] = ev.target.value; } });
+        return h('td', { class: c.type === 'number' ? 'num' : '', 'data-label': c.label }, el);
       }), h('td', {}, h('button', { type: 'button', class: 'ghost', 'aria-label': 'Remover linha', title: 'Remover linha', onclick: () => { list.splice(idx, 1); render(); }, text: '×' }))));
     });
     if (!list.length) tb.append(h('tr', {}, h('td', { colspan: cols.length + 1, class: 'note', text: 'Nenhuma linha ainda.' })));
     table.append(tb);
-    return [h('div', { class: 'tbox' }, table), h('div', { class: 'actions' }, h('button', { type: 'button', onclick: () => { list.push(blank()); render(); }, text: addLabel }))];
+    return [h('div', { class: 'tbox' }, table), h('div', { class: 'actions' }, h('button', { type: 'button', onclick: (ev) => { const sec = ev.target.closest('section'); list.push(blank()); if (sec) fbusca[sec.id] = ''; render(); const tr = sec && document.getElementById(sec.id)?.querySelector('tbody tr:last-child'); if (tr) { tr.scrollIntoView({ block: 'nearest' }); tr.querySelector('input, select')?.focus(); } }, text: addLabel }))];
   }
 
   // ---------- notas (invoices) ----------
   let tab = 'geral';
-  let notas = { id: null, rows: null, unsub: null };
+  let notas = { id: null, rows: null, lotes: null, unsub: null };
+  let nd = null; // rascunho das notas durante "Atualizar dados": { lotes, dirty, mexidas, novas, aberta, apagar }
   const flt = { q: '', cat: '', st: '', mes: '' };
   function ensureNotas(id) {
     if (!db || notas.id === id) return;
     if (notas.unsub) notas.unsub();
-    notas = { id, rows: null, unsub: null };
+    notas = { id, rows: null, lotes: null, unsub: null };
+    const quer = () => current === id && (mode === 'view' ? tab !== 'geral' : mode === 'edit' && tab === 'notas' && !nd);
     notas.unsub = db.collection('obras/' + id + '/notas').onSnapshot((snap) => {
       notas.erro = false;
-      notas.rows = snap.docs.map((d) => d.data()).sort((a, b) => n(a.ordem) - n(b.ordem)).flatMap((d) => d.rows || []);
-      if (current === id && mode === 'view' && tab !== 'geral') render();
-    }, () => { notas.rows = []; notas.erro = true; if (current === id && mode === 'view' && tab !== 'geral') render(); });
+      notas.lotes = snap.docs.map((d) => ({ ...d.data(), id: d.id })).sort((a, b) => n(a.ordem) - n(b.ordem));
+      notas.rows = notas.lotes.flatMap((d) => d.rows || []);
+      if (quer()) render();
+    }, () => { notas.rows = []; notas.lotes = null; notas.erro = true; if (quer()) render(); });
   }
   const statusNota = (x) => {
     const v = n(x.v), p = n(x.p);
@@ -434,7 +489,7 @@ td.wide { min-width: 15em; }
   function renderNotas(o) {
     if (!notas.rows) { app.append(h('div', { class: 'empty', text: 'Carregando notas…' })); return; }
     if (notas.erro) { app.append(h('div', { class: 'empty', text: 'Não foi possível carregar as notas desta obra (veja o aviso acima). Recarregue a página.' })); return; }
-    if (!notas.rows.length) { app.append(h('div', { class: 'empty', text: 'Nenhuma nota cadastrada para esta obra ainda.' })); return; }
+    if (!notas.rows.length) { app.append(h('div', { class: 'empty', text: 'Nenhuma nota cadastrada para esta obra ainda.' + (canWrite ? ' Para incluir, clique em Atualizar dados.' : '') })); return; }
     const all = notas.rows;
     const cats = [...new Set(all.map((x) => x.c).filter(Boolean))].sort();
     const meses = [...new Set(all.map((x) => x.m).filter(Boolean))].sort();
@@ -454,7 +509,7 @@ td.wide { min-width: 15em; }
       const rows = all.filter((x) => (!flt.cat || x.c === flt.cat) && (!flt.st || statusNota(x) === flt.st) && (!flt.mes || x.m === flt.mes) && (!qq || norm([x.f, x.nf, 'romaneio ' + x.r, x.t, x.o].join(' ')).includes(qq)));
       const tv = sum(rows, (x) => n(x.v)), tp = sum(rows, (x) => n(x.p)), ta = sum(rows, aberto), venc = rows.filter(vencida);
       const kp = h('section', { class: 'kpis' },
-        h('div', { class: 'card kpi' }, h('div', { class: 'lbl', text: 'Valor das notas' }), h('div', { class: 'big', text: brl(tv) }), h('div', { class: 'sub', text: rows.length.toLocaleString('pt-BR') + ' notas' })),
+        h('div', { class: 'card kpi' }, h('div', { class: 'lbl', text: 'Valor das notas' }), h('div', { class: 'big', text: brl(tv) }), h('div', { class: 'sub', text: rows.length.toLocaleString('pt-BR') + (rows.length === 1 ? ' nota' : ' notas') })),
         h('div', { class: 'card kpi' }, h('div', { class: 'lbl', text: 'Pago' }), h('div', { class: 'big', text: brl(tp) }), meter(tv ? tp / tv * 100 : 0, null, 'var(--fin)'), h('div', { class: 'sub' }, h('b', { text: pct(tv ? tp / tv * 100 : null) }), ' do valor das notas')),
         h('div', { class: 'card kpi' }, h('div', { class: 'lbl', text: 'Sem pagamento registrado' }), h('div', { class: 'big', text: brl(ta) }), h('div', { class: 'sub', text: rows.filter((x) => aberto(x) > 0 && statusNota(x) !== 'Pago').length.toLocaleString('pt-BR') + ' notas com saldo' })),
         h('div', { class: 'card kpi' }, h('div', { class: 'lbl', text: 'Vencidas sem pagamento' }), h('div', { class: 'big' + (venc.length ? ' c-bad' : ''), text: brl(sum(venc, aberto)) }), h('div', { class: 'sub', text: venc.length.toLocaleString('pt-BR') + ' notas com vencimento já passado' })));
@@ -516,15 +571,161 @@ td.wide { min-width: 15em; }
       cards.push(h('section', { class: 'card', id: 'contratos' }, h('div', {}, h('h2', { text: 'Orçamentos e contratos' }), h('p', { class: 'note', text: 'Propostas e contratos fechados com fornecedores, com o valor de cada um.' })), box));
       setTimeout(() => dataTable(box, [{ key: 'f', label: 'Fornecedor', cls: 'wide' }, { key: 'esc', label: 'Escopo' }, { key: 'c', label: 'Categoria', cls: 'hide-sm' }, { key: 'v', label: 'Valor', num: true, fmt: brlFull, total: (rs) => brlFull(sum(rs, (x) => n(x.v))) }], o.contratos, { sort: 'v', limit: 100, total: true }));
     }
-    if ((o.infraestrutura || []).length) {
+    if ((o.infraestrutura || []).length || (o.locacoes || []).length) {
       const box = h('div');
       cards.push(h('section', { class: 'card', id: 'infraestrutura' }, h('div', {}, h('h2', { text: 'Infraestrutura e tecnologia' }), h('p', { class: 'note', text: 'Materiais e equipamentos de TI, CFTV e PDV, com o preço de cada item.' })), box,
         (o.locacoes || []).length ? h('div', {}, h('h3', { text: 'Contratos mensais', style: 'margin:8px 0' }), h('div', { class: 'tbox' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', { text: 'Fornecedor' }), h('th', { text: 'Tipo' }), h('th', { class: 'num', text: 'Valor mensal' }))),
           h('tbody', {}, ...o.locacoes.map((x) => h('tr', {}, h('td', { text: x.f }), h('td', { text: x.esc }), h('td', { class: 'num', text: brlFull(x.v) }))), h('tr', { class: 'tot' }, h('td', { text: 'Total por mês' }), h('td'), h('td', { class: 'num', text: brlFull(sum(o.locacoes, (x) => n(x.v))) })))))) : null));
-      setTimeout(() => dataTable(box, [{ key: 'f', label: 'Fornecedor', cls: 'wide' }, { key: 'esc', label: 'Item' }, { key: 'v', label: 'Valor', num: true, fmt: brlFull, total: (rs) => brlFull(sum(rs, (x) => n(x.v))) }], o.infraestrutura, { sort: 'v', limit: 100, total: true }));
+      if ((o.infraestrutura || []).length) setTimeout(() => dataTable(box, [{ key: 'f', label: 'Fornecedor', cls: 'wide' }, { key: 'esc', label: 'Item' }, { key: 'v', label: 'Valor', num: true, fmt: brlFull, total: (rs) => brlFull(sum(rs, (x) => n(x.v))) }], o.infraestrutura, { sort: 'v', limit: 100, total: true }));
     }
-    if (!cards.length) cards.push(h('div', { class: 'empty', text: notas.rows ? 'Nenhum fornecedor cadastrado para esta obra ainda.' : 'Carregando…' }));
+    if (!cards.length) cards.push(h('div', { class: 'empty', text: notas.rows ? 'Nenhum fornecedor cadastrado para esta obra ainda.' + (canWrite ? ' Para incluir, clique em Atualizar dados.' : '') : 'Carregando…' }));
     app.append(...cards);
+  }
+
+  // ---------- edição das notas ----------
+  const NOTAS_POR_LOTE = 250;
+  function notasDraft() {
+    if (!nd && notas.id === current && notas.lotes) {
+      const lotes = structuredClone(notas.lotes); for (const L of lotes) L.rows ||= [];
+      nd = { lotes, orig: new Map(lotes.flatMap((L) => L.rows).map((r) => [r.l, structuredClone(r)])), dirty: new Set(), mexidas: new Set(), novas: new Set(), aberta: null, apagar: null, lim: 60 };
+    }
+    return nd;
+  }
+  const loteDe = (N, r) => N.lotes.find((L) => L.rows.includes(r));
+  const marcar = (N, r) => { const L = loteDe(N, r); if (L) N.dirty.add(L.id); N.mexidas.add(r.l);
+    if (msg.err) { msg = { text: '', err: false }; const m = document.querySelector('.editbar .msg'); if (m) { m.className = 'msg'; m.textContent = 'As mudanças só valem depois de salvar.'; } } };
+  function novaNota() {
+    const N = notasDraft(); if (!N) return;
+    const todas = N.lotes.flatMap((L) => L.rows);
+    let L = N.lotes[N.lotes.length - 1];
+    if (!L || L.rows.length >= NOTAS_POR_LOTE) {
+      let ordem = Math.max(0, ...N.lotes.map((x) => n(x.ordem))) + 1;
+      while (N.lotes.some((x) => x.id === 'lote-' + ordem)) ordem++;
+      L = { id: 'lote-' + ordem, ordem, rows: [] };
+      N.lotes.push(L);
+    }
+    const r = { l: Math.max(0, ...todas.map((x) => n(x.l)), ...(notas.rows || []).map((x) => n(x.l))) + 1, f: '', nf: '', r: '', c: '', m: monthKey(today()), ve: '', v: '', t: '', o: '', p: '', dp: '' };
+    L.rows.push(r); N.dirty.add(L.id); N.mexidas.add(r.l); N.novas.add(r.l); N.aberta = r.l; N.apagar = null;
+    Object.assign(flt, { q: '', cat: '', st: '', mes: '' });
+    render();
+    const el = document.getElementById('nf-f'); if (el) { el.focus(); el.scrollIntoView({ block: 'center' }); }
+  }
+  function formNota(N, r, cats, forns) {
+    const fld = (label, key, type = 'text', extra = {}) => h('label', {}, label, type === 'number'
+      ? numInput(r, key, { id: 'nf-' + key, placeholder: '0,00', ...extra }, () => marcar(N, r))
+      : h('input', { type, id: 'nf-' + key, value: r[key] ?? '', ...extra, oninput: (e) => { r[key] = e.target.value; if (key === 'dp' && e.target.value) delete r.dpt; marcar(N, r); } }));
+    const fechar = () => { N.aberta = null; N.apagar = null; render(); (document.getElementById('ed-' + r.l) || document.getElementById('nova-nota'))?.focus(); };
+    return h('div', { class: 'nota-form' },
+      h('div', { class: 'form' },
+        fld('Fornecedor (obrigatório)', 'f', 'text', { list: 'dl-forn', required: true }), fld('Nº da NF', 'nf'), fld('Romaneio', 'r'), fld('Categoria', 'c', 'text', { list: 'dl-cat' }),
+        fld('Mês de lançamento', 'm', 'month'), fld('Vencimento', 've', 'date'), fld('Valor da nota (R$)', 'v', 'number'), fld('Serviço / tarefa', 't'),
+        fld('Observação', 'o'), fld('Valor pago (R$)', 'p', 'number'), fld('Data do pagamento', 'dp', 'date')),
+      r.dpt ? h('p', { class: 'note', text: `Datas de pagamento na planilha: ${r.dpt}. Se você informar a data do pagamento acima, ela passa a valer.` }) : null,
+      h('div', { class: 'actions' },
+        n(r.p) > 0 ? null : h('button', { type: 'button', title: 'Preenche o valor pago com o valor da nota e, se estiver vazia, a data do pagamento com hoje', onclick: () => { if (!(n(r.v) > 0)) { const v = document.getElementById('nf-v'); if (v) { v.setAttribute('aria-invalid', 'true'); v.focus(); } return; } r.p = n(r.v); if (!r.dp) r.dp = iso(today()); delete r.dpt; marcar(N, r); render(); document.getElementById('nf-p')?.focus(); }, text: 'Marcar como paga' }),
+        N.apagar === r.l
+          ? h('button', { type: 'button', class: 'danger', id: 'nf-del', onclick: () => { const L = loteDe(N, r); if (L) { L.rows.splice(L.rows.indexOf(r), 1); N.dirty.add(L.id); } if (!N.novas.has(r.l)) N.excluidas = (N.excluidas || 0) + 1; N.mexidas.delete(r.l); N.novas.delete(r.l); fechar(); }, text: 'Confirmar exclusão da nota' })
+          : h('button', { type: 'button', class: 'danger', onclick: () => { N.apagar = r.l; render(); document.getElementById('nf-del')?.focus(); }, text: 'Excluir nota' }),
+        h('span', { class: 'sp' }),
+        h('button', { type: 'button', class: 'primary', onclick: fechar, text: 'Fechar' })));
+  }
+  function renderNotasEdit(o) {
+    const N = notasDraft();
+    if (!N) { app.append(h('div', { class: 'empty', text: notas.erro ? 'Não foi possível carregar as notas desta obra (veja o aviso acima). Recarregue a página.' : 'Carregando notas…' })); return; }
+    const all = N.lotes.flatMap((L) => L.rows);
+    const cats = [...new Set(all.map((x) => x.c).filter(Boolean))].sort();
+    const forns = [...new Set(all.map((x) => String(x.f || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const meses = [...new Set(all.map((x) => x.m).filter(Boolean))].sort();
+    const sts = ['Pago', 'Pago parcial', 'Sem pagamento registrado', 'Sem valor'];
+    const sel = (id, label, cur, opts, fmt, set) => { const sl = h('select', { id, 'aria-label': label, onchange: (e) => { set(e.target.value); N.aberta = null; render(); } }, h('option', { value: '', text: label }), ...opts.map((x) => h('option', { value: x, text: fmt ? fmt(x) : x }))); sl.value = cur; return sl; };
+    const q = h('input', { type: 'text', id: 'f-busca', placeholder: 'Buscar fornecedor, NF, romaneio ou serviço', value: flt.q, style: 'flex:1;min-width:min(100%,260px)' });
+    let qt; q.addEventListener('input', () => { clearTimeout(qt); qt = setTimeout(() => { flt.q = q.value; draw(); }, 250); });
+    const alteradas = N.mexidas.size;
+    app.append(
+      h('datalist', { id: 'dl-forn' }, ...forns.map((x) => h('option', { value: x }))),
+      h('datalist', { id: 'dl-cat' }, ...cats.map((x) => h('option', { value: x }))),
+      h('section', { class: 'card', id: 'editar-notas' },
+        h('div', { class: 'cardhead' }, h('div', {}, h('h2', { text: 'Notas e pagamentos' }),
+          h('p', { class: 'note', text: 'Clique em Editar para corrigir uma nota ou registrar o pagamento, ou inclua uma nota nova. As mudanças só valem depois de Salvar.' })),
+          h('button', { type: 'button', class: 'primary', id: 'nova-nota', onclick: novaNota, text: '+ Nova nota' })),
+        h('div', { class: 'actions filters' }, q,
+          sel('f-cat', 'Todas as categorias', flt.cat, cats, null, (v) => { flt.cat = v; }),
+          sel('f-st', 'Todos os status', flt.st, sts, null, (v) => { flt.st = v; }),
+          sel('f-mes', 'Todos os meses', flt.mes, meses, (m) => mlabel(mStart(m)), (v) => { flt.mes = v; })),
+        h('p', { class: 'note', text: `${all.length.toLocaleString('pt-BR')} ${all.length === 1 ? 'nota' : 'notas'}` + (alteradas ? ` · ${alteradas} ${alteradas === 1 ? 'alterada' : 'alteradas'} nesta edição` : '') + (N.excluidas ? ` · ${N.excluidas} ${N.excluidas === 1 ? 'excluída' : 'excluídas'}` : '') })));
+    const box = h('div');
+    app.append(h('section', { class: 'card', id: 'lista-notas-edicao' }, box));
+    let lim = N.lim;
+    function draw() {
+      const qq = norm(flt.q).trim();
+      const rows = all.filter((x) => x.l === N.aberta || ((!flt.cat || x.c === flt.cat) && (!flt.st || statusNota(x) === flt.st) && (!flt.mes || x.m === flt.mes) && (!qq || norm([x.f, x.nf, 'romaneio ' + x.r, x.t, x.o].join(' ')).includes(qq))))
+        .sort((a, b) => (N.novas.has(b.l) - N.novas.has(a.l)) || n(b.l) - n(a.l));
+      const tb = h('tbody');
+      const vis = rows.slice(0, lim);
+      if (N.aberta != null && !vis.some((x) => x.l === N.aberta)) { const ab = rows.find((x) => x.l === N.aberta); if (ab) vis.unshift(ab); }
+      for (const x of vis) {
+        const nova = N.novas.has(x.l), mex = N.mexidas.has(x.l);
+        tb.append(h('tr', { class: mex ? 'mexida' : '' },
+          h('td', { class: 'wide' }, h('span', {}, x.f || h('i', { class: 'note', text: 'Fornecedor não informado' }), nova ? h('span', { class: 'tag warn mini', text: 'nova' }) : mex ? h('span', { class: 'tag muted mini', text: 'alterada' }) : null,
+            x.t || x.o ? h('span', { class: 'detail', text: [x.t, x.o].filter(Boolean).join(' · ') }) : null)),
+          h('td', { class: 'hide-sm', text: x.nf || '—' }),
+          h('td', { class: vencida(x) ? 'pend-late' : '', text: dt(x.ve) }),
+          h('td', { class: 'num', text: brlCent(x.v) }),
+          h('td', { class: 'num', text: n(x.p) ? brlCent(x.p) : '—' }),
+          h('td', { class: 'hide-sm' }, pill(statusNota(x))),
+          h('td', { class: 'num' }, h('button', { type: 'button', id: 'ed-' + x.l, class: x.l === N.aberta ? 'primary' : '', 'aria-expanded': String(x.l === N.aberta), 'aria-label': `${x.l === N.aberta ? 'Fechar' : 'Editar'} nota ${x.nf || ''} de ${x.f || 'fornecedor não informado'}`, onclick: () => { N.aberta = N.aberta === x.l ? null : x.l; N.apagar = null; render(); document.querySelector('.nota-form')?.scrollIntoView({ block: 'nearest' }); document.getElementById(N.aberta != null ? 'nf-f' : 'ed-' + x.l)?.focus({ preventScroll: N.aberta != null }); }, text: x.l === N.aberta ? 'Fechar' : 'Editar' }))));
+        if (x.l === N.aberta) tb.append(h('tr', { class: 'form-row' }, h('td', { colspan: '7' }, formNota(N, x, cats, forns))));
+      }
+      if (!rows.length) tb.append(h('tr', {}, h('td', { colspan: '7', class: 'note', text: all.length ? 'Nada encontrado com esses filtros.' : 'Nenhuma nota ainda. Clique em + Nova nota.' })));
+      box.replaceChildren(h('div', { class: 'tbox' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', { text: 'Fornecedor' }), h('th', { class: 'hide-sm', text: 'NF' }), h('th', { text: 'Vencimento' }), h('th', { class: 'num', text: 'Valor' }), h('th', { class: 'num', text: 'Pago' }), h('th', { class: 'hide-sm', text: 'Status' }), h('th'))), tb)));
+      if (rows.length > lim) box.append(h('div', { class: 'actions' }, h('span', { class: 'note', text: `Mostrando ${lim.toLocaleString('pt-BR')} de ${rows.length.toLocaleString('pt-BR')}` }), h('button', { type: 'button', onclick: () => { N.lim = lim += 200; draw(); }, text: 'Mostrar mais' })));
+    }
+    draw();
+  }
+  // mesma regra usada na carga da planilha: pago sem data (ou só com datas em texto) fica fora do gráfico
+  function mensalDasNotas(rows) {
+    const lan = new Map(), pag = new Map();
+    for (const r of rows) {
+      const m = r.m || ''; lan.set(m, (lan.get(m) || 0) + n(r.v));
+      if (n(r.p)) { const k = r.dpt || !r.dp ? '' : String(r.dp).slice(0, 7); pag.set(k, (pag.get(k) || 0) + n(r.p)); }
+    }
+    const r2 = (v) => Math.round(v * 100) / 100;
+    return [...new Set([...lan.keys(), ...pag.keys()])].map((mes) => ({ mes, lancado: r2(lan.get(mes) || 0), pago: r2(pag.get(mes) || 0) }));
+  }
+  const canonRow = (r) => canon([r]);
+  const canon = (rows) => JSON.stringify(rows || [], (k, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : v));
+  const porCat = (rows) => rows.reduce((m, r) => m.set(r.c || 'Sem categoria', (m.get(r.c || 'Sem categoria') || 0) + n(r.v)), new Map());
+  const brlCent = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n(v));
+
+  // ---------- edição de fornecedores e contratos ----------
+  const fbusca = {};
+  function renderFornecedoresEdit(o) {
+    const card = (id, titulo, nota, list, cols, blank, add) => {
+      const [tb, act] = editRows(list, cols, blank, add);
+      let busca = null;
+      if (list.length > 12) {
+        tb.classList.add('tall');
+        busca = h('input', { type: 'text', placeholder: 'Buscar nesta tabela', 'aria-label': 'Buscar em ' + titulo, value: fbusca[id] || '', style: 'max-width:320px',
+          oninput: (e) => { fbusca[id] = e.target.value; filtra(); } });
+        const filtra = () => { const q = norm(fbusca[id]); for (const tr of tb.querySelectorAll('tbody tr')) tr.hidden = !!q && !norm([...tr.querySelectorAll('input')].map((i) => i.value).join(' ')).includes(q); };
+        setTimeout(filtra);
+      }
+      return h('section', { class: 'card ed-rows', id }, h('div', {}, h('h2', { text: titulo }), h('p', { class: 'note', text: nota })), busca, tb, act);
+    };
+    app.append(
+      card('editar-contratos', 'Orçamentos e contratos', 'Propostas e contratos fechados com fornecedores.', o.contratos ||= [],
+        [{ key: 'f', label: 'Fornecedor', cls: 'name' }, { key: 'esc', label: 'Escopo', cls: 'name' }, { key: 'c', label: 'Categoria' }, { key: 'v', label: 'Valor R$', type: 'number', cls: 'money' }],
+        () => ({ f: '', esc: '', c: '', v: '' }), '+ Adicionar contrato'),
+      card('editar-mobilizado', 'Equipamentos mobilizados por fornecedor', 'Notas de equipamentos comprados fora dos romaneios: quantidade de notas e valor total.', o.fornecedores_mobilizado ||= [],
+        [{ key: 'f', label: 'Fornecedor', cls: 'name' }, { key: 'n', label: 'Notas', type: 'number' }, { key: 'v', label: 'Valor R$', type: 'number', cls: 'money' }, { key: 'obs', label: 'Observação', cls: 'name' }],
+        () => ({ f: '', n: 1, v: '', obs: '' }), '+ Adicionar fornecedor'),
+      card('editar-infraestrutura', 'Infraestrutura e tecnologia', 'Materiais e equipamentos de TI, CFTV e PDV.', o.infraestrutura ||= [],
+        [{ key: 'f', label: 'Fornecedor', cls: 'name' }, { key: 'esc', label: 'Item', cls: 'name' }, { key: 'v', label: 'Valor R$', type: 'number', cls: 'money' }],
+        () => ({ f: '', esc: '', v: '' }), '+ Adicionar item'),
+      card('editar-locacoes', 'Contratos mensais', 'Locações e serviços pagos todo mês.', o.locacoes ||= [],
+        [{ key: 'f', label: 'Fornecedor', cls: 'name' }, { key: 'esc', label: 'Tipo', cls: 'name' }, { key: 'v', label: 'Valor mensal R$', type: 'number', cls: 'money' }],
+        () => ({ f: '', esc: '', v: '' }), '+ Adicionar contrato mensal'),
+      h('p', { class: 'note', text: 'A tabela de fornecedores das notas é calculada sozinha a partir da aba Notas e pagamentos.' }));
   }
 
   // ---------- prazo (schedule clock) ----------
@@ -591,6 +792,7 @@ td.wide { min-width: 15em; }
     pick.disabled = mode !== 'view';
   }
   function render() {
+    document.documentElement.classList.toggle('editando', mode === 'edit');
     renderBar();
     app.replaceChildren();
     if (mode === 'new') return renderNew();
@@ -627,8 +829,10 @@ td.wide { min-width: 15em; }
 
     // header
     const head = h('div', { class: 'head', id: 'resumo' });
-    if (ed) {
-      const fld = (label, key, type = 'text') => h('label', {}, label, h('input', { type, id: 'f-' + key, value: o[key] ?? '', step: type === 'number' ? 'any' : null, oninput: (e) => { o[key] = type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value; } }));
+    if (ed && tab !== 'geral') {
+      head.append(h('div', { class: 'eyebrow', text: 'Atualizando dados' }), h('h1', { text: o.nome || 'Obra' }));
+    } else if (ed) {
+      const fld = (label, key, type = 'text') => h('label', {}, label, type === 'number' ? numInput(o, key, { id: 'f-' + key }) : h('input', { type, id: 'f-' + key, value: o[key] ?? '', oninput: (e) => { o[key] = e.target.value; } }));
       head.append(h('div', { class: 'form' }, fld('Nome da obra', 'nome'), fld('Local', 'local'), fld('Endereço', 'endereco'), fld('Área (m²)', 'metragem', 'number'), fld('Início', 'inicio', 'date'), fld('Deadline', 'deadline', 'date'), fld('Concluída em', 'conclusao', 'date'),
         fld('Gerenciadora', 'gerenciadora'), fld('Responsável', 'responsavel'), fld('Target da obra (R$)', 'target', 'number'), fld('Último relatório', 'relatorio')));
     } else {
@@ -637,14 +841,12 @@ td.wide { min-width: 15em; }
       head.append(h('p', { class: 'note', text: [o.relatorio && 'Último relatório: ' + o.relatorio, o.atualizado_em && 'Dados atualizados em ' + new Date(o.atualizado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })].filter(Boolean).join(' · ') }));
     }
     app.append(head);
-    if (!ed) {
-      const pc = prazoCard(o, f); if (pc) app.append(pc);
-      ensureNotas(current);
-      const tabs = [['geral', 'Visão geral'], ['notas', 'Notas e pagamentos'], ['fornecedores', 'Fornecedores e contratos']];
-      app.append(h('nav', { class: 'tabs', 'aria-label': 'Seções da obra' }, ...tabs.map(([k, l]) => h('button', { type: 'button', 'aria-current': tab === k ? 'page' : null, onclick: () => { tab = k; render(); }, text: l }))));
-      if (tab === 'notas') return renderNotas(o);
-      if (tab === 'fornecedores') return renderFornecedores(o);
-    }
+    if (!ed) { const pc = prazoCard(o, f); if (pc) app.append(pc); }
+    ensureNotas(current);
+    const tabs = [['geral', 'Visão geral'], ['notas', 'Notas e pagamentos'], ['fornecedores', 'Fornecedores e contratos']];
+    app.append(h('nav', { class: 'tabs', 'aria-label': 'Seções da obra' }, ...tabs.map(([k, l]) => h('button', { type: 'button', 'aria-current': tab === k ? 'page' : null, onclick: () => { tab = k; render(); if (ed) window.scrollTo(0, 0); }, text: l }))));
+    if (tab === 'notas') { if (ed) { renderNotasEdit(o); app.append(editBar()); } else renderNotas(o); return; }
+    if (tab === 'fornecedores') { if (ed) { renderFornecedoresEdit(o); app.append(editBar()); } else renderFornecedores(o); return; }
 
     // KPIs
     const k = [];
@@ -676,7 +878,7 @@ td.wide { min-width: 15em; }
     const cm = h('div', { class: 'chart', id: 'chart-mensal' });
     const row = h('section', { class: 'two', id: 'fluxo' });
     if (ed) {
-      row.append(h('div', { class: 'card' }, h('h2', { text: 'Notas lançadas e pagas por mês' }), h('p', { class: 'note', text: 'Mês no formato AAAA-MM. Valores em reais.' }),
+      row.append(h('div', { class: 'card' }, h('h2', { text: 'Notas lançadas e pagas por mês' }), h('p', { class: 'note', text: 'Mês no formato AAAA-MM. Valores em reais. Se você incluir, mudar ou excluir notas na aba Notas e pagamentos, os meses dessas notas são ajustados aqui ao salvar.' }),
         ...editRows(o.mensal ||= [], [{ key: 'mes', label: 'Mês', type: 'month' }, { key: 'lancado', label: 'Lançado R$', type: 'number', cls: 'money' }, { key: 'pago', label: 'Pago R$', type: 'number', cls: 'money' }],
           () => ({ mes: monthKey(today()), lancado: 0, pago: 0 }), '+ Adicionar mês')));
       row.append(h('div', { class: 'card' }, h('h2', { text: 'Lançado por categoria' }), h('p', { class: 'note', text: 'Use valores negativos para descontos e duplicidades.' }),
@@ -869,8 +1071,8 @@ td.wide { min-width: 15em; }
 
   function editBar() {
     return h('div', { class: 'editbar' },
-      h('strong', { text: 'Atualizando dados' }), h('span', { class: 'msg' + (msg.err ? ' err' : ''), text: msg.text || 'As mudanças só valem depois de salvar.' }), h('span', { class: 'sp' }),
-      confirmDel ? h('button', { type: 'button', class: 'danger', onclick: deleteObra, text: 'Confirmar exclusão da obra' }) : h('button', { type: 'button', class: 'danger', onclick: () => { confirmDel = true; render(); }, text: 'Excluir obra' }),
+      h('strong', { text: 'Atualizando dados' }), h('span', { class: 'msg' + (msg.err ? ' err' : ''), text: msg.text || (() => { const k = nd ? nd.mexidas.size + (nd.excluidas || 0) : 0; return k ? `${k} ${k === 1 ? 'nota alterada' : 'notas alteradas'}: clique em Salvar para gravar.` : 'As mudanças só valem depois de salvar.'; })() }), h('span', { class: 'sp' }),
+      tab !== 'geral' ? null : confirmDel ? h('button', { type: 'button', class: 'danger', onclick: deleteObra, text: 'Confirmar exclusão da obra' + (notas.id === current && notas.rows && notas.rows.length ? ` e das ${notas.rows.length.toLocaleString('pt-BR')} notas` : '') }) : h('button', { type: 'button', class: 'danger', onclick: () => { confirmDel = true; render(); }, text: 'Excluir obra' }),
       h('button', { type: 'button', onclick: cancelEdit, text: 'Cancelar' }),
       h('button', { type: 'button', class: 'primary', onclick: save, text: 'Salvar' }));
   }
@@ -917,11 +1119,47 @@ td.wide { min-width: 15em; }
   }
 
   // ---------- edit / save ----------
-  function startEdit() { draft = structuredClone(obras.get(current)); mode = 'edit'; confirmDel = false; msg = { text: '', err: false }; render(); }
-  function cancelEdit() { draft = null; mode = 'view'; confirmDel = false; render(); }
+  let draftOrig = null; // a obra como estava quando esta pessoa clicou em Atualizar dados
+  function startEdit() { draft = structuredClone(obras.get(current)); draftOrig = structuredClone(draft); nd = null; mode = 'edit'; confirmDel = false; msg = { text: '', err: false }; render(); }
+  // compara ignorando a ordem das chaves e listas vazias criadas só para mostrar a tabela de edição
+  const assin = (o) => JSON.stringify(o, (k, v) => Array.isArray(v) ? (v.length || !k ? v : undefined) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : v);
+  const sig = (v) => assin({ v });
+  const mudou = () => mode === 'edit' && !!draft && (!!(nd && (nd.dirty.size || nd.excluidas)) || assin(draft) !== assin(draftOrig));
+  function cancelEdit() { if (mudou() && !confirm('Descartar as alterações que ainda não foram salvas?')) return; draft = null; draftOrig = null; nd = null; mode = 'view'; confirmDel = false; msg = { text: '', err: false }; render(); }
   const errText = (e) => e && e.code === 'invalid_argument' ? 'Você não tem permissão para alterar os dados desta página.' : e && e.code === 'quota_exceeded' ? 'O espaço de dados desta página está cheio.' : (e && e.message) || 'Não foi possível salvar agora. Tente de novo.';
-  async function save() {
+  const PARTES = { nome: 'nome da obra', etapas: 'etapas', centros: 'centros de custo', categorias: 'categorias', mensal: 'notas lançadas e pagas por mês', curva_fisica: 'curva física', atividades: 'atividades', orcado_realizado: 'orçado x realizado', mao_obra: 'mão de obra', mao_obra_fornecedores: 'mão de obra por fornecedor', pendencias: 'pendências', contratos: 'orçamentos e contratos', fornecedores_mobilizado: 'equipamentos mobilizados', infraestrutura: 'infraestrutura', locacoes: 'contratos mensais' };
+  // Se outra pessoa salvou a obra enquanto esta editava, junta as duas versões parte por parte:
+  // o que só uma das duas mudou entra; se as duas mudaram a mesma parte, fica a versão já salva e a lista dessas partes volta.
+  function juntarObra() {
+    const atual = obras.get(current);
+    if (!atual || (atual.atualizado_em || null) === (draftOrig.atualizado_em || null)) return [];
+    const junto = structuredClone(atual), conflitos = [];
+    for (const k of new Set([...Object.keys(draft), ...Object.keys(draftOrig)])) {
+      if (k === 'atualizado_em') continue;
+      const meu = sig(draft[k]), antes = sig(draftOrig[k]), deles = sig(atual[k]);
+      if (meu === antes) continue;
+      if (deles !== antes && deles !== meu) { conflitos.push(k); continue; }
+      if (draft[k] === undefined) delete junto[k]; else junto[k] = draft[k];
+    }
+    draft = junto; draftOrig = structuredClone(atual);
+    return conflitos;
+  }
+  const descNota = (r) => [r.nf ? 'NF ' + r.nf : '', r.f].filter(Boolean).join(' de ') || 'sem fornecedor';
+  let salvando = false;
+  async function save() { if (salvando) return; salvando = true; try { await salvar(); } finally { salvando = false; } }
+  async function salvar() {
+    if (!obras.get(current)) { msg = { text: 'Esta obra foi excluída por outra pessoa enquanto você editava. Clique em Cancelar.', err: true }; return render(); }
     if (!draft.nome || !String(draft.nome).trim()) { msg = { text: 'Informe o nome da obra.', err: true }; return render(); }
+    if (temNaN(draft)) {
+      tab = ['contratos', 'fornecedores_mobilizado', 'infraestrutura', 'locacoes'].some((k) => temNaN(draft[k])) ? 'fornecedores' : 'geral';
+      msg = { text: 'Há um valor inválido, marcado em vermelho. Use só números, com vírgula nos centavos (ex.: 1.234,56).', err: true }; render();
+      const el = document.querySelector('main input[aria-invalid="true"]'); if (el) { el.focus(); el.scrollIntoView({ block: 'center' }); } return;
+    }
+    const conflitosObra = juntarObra();
+    if (conflitosObra.length) {
+      msg = { text: `Outra pessoa salvou mudanças em ${conflitosObra.map((k) => PARTES[k] || k).join(', ')} enquanto você editava. Nessa parte ficou a versão dela; confira e clique em Salvar de novo para gravar o resto.`, err: true };
+      return render();
+    }
     for (const e of draft.etapas || []) for (const k of ['peso', 'realizado']) e[k] = n(e[k]);
     for (const x of draft.centros || []) x.valor = n(x.valor);
     for (const x of draft.categorias || []) x.valor = n(x.valor);
@@ -934,20 +1172,136 @@ td.wide { min-width: 15em; }
     for (const x of draft.atividades || []) { x.concluido = blankOr(x.concluido); x.meta = blankOr(x.meta); }
     for (const x of draft.mao_obra || []) { x.qtde = n(x.qtde); x.unitario = n(x.unitario); }
     for (const x of draft.mao_obra_fornecedores || []) x.valor = n(x.valor);
-    if ((draft.etapas || []).length && !draft.curva_fisica.length) {
-      const key = monthKey(today());
-      draft.historico = (draft.historico || []).filter((x) => x.mes !== key).concat({ mes: key, fisico: Math.round(fisico(draft).fr * 10) / 10 }).sort((a, b) => a.mes.localeCompare(b.mes));
+    for (const k of ['contratos', 'fornecedores_mobilizado', 'infraestrutura', 'locacoes']) {
+      if (!draft[k]) continue;
+      draft[k] = draft[k].filter((x) => String(x.f || '').trim() || String(x.esc || '').trim() || n(x.v));
+      for (const x of draft[k]) { x.f = String(x.f || '').trim(); x.v = n(x.v); if ('n' in x) x.n = n(x.n); }
     }
-    draft.atualizado_em = new Date().toISOString();
+    // notas: só o que esta pessoa incluiu, mudou ou excluiu é aplicado sobre a versão mais recente das notas
+    const N = nd && (nd.dirty.size || nd.excluidas) ? nd : null;
+    let lotesFinal = null, tocados = new Set(), antes = [], depois = [];
+    if (N) {
+      const ruim = N.lotes.flatMap((L) => L.rows).find((r) => Number.isNaN(r.v) || Number.isNaN(r.p));
+      if (ruim) { tab = 'notas'; N.aberta = ruim.l; Object.assign(flt, { q: '', cat: '', st: '', mes: '' }); msg = { text: 'Há um valor inválido na nota aberta, marcado em vermelho. Use só números, com vírgula nos centavos (ex.: 1.234,56).', err: true }; render(); const el = document.querySelector('.nota-form input[aria-invalid="true"]'); if (el) { el.focus(); el.scrollIntoView({ block: 'center' }); } return; }
+      const vazia = (r) => ['f', 'nf', 'r', 'c', 've', 'v', 't', 'o', 'p', 'dp'].every((k) => String(r[k] ?? '').trim() === '');
+      for (const L of N.lotes) L.rows = L.rows.filter((r) => !(N.novas.has(r.l) && vazia(r)));
+      const ids = new Set(), mudadas = [], novas = [];
+      for (const r of N.lotes.flatMap((L) => L.rows)) {
+        ids.add(r.l);
+        const o = N.orig.get(r.l);
+        if (o && canonRow(r) === canonRow(o)) continue;
+        r.f = String(r.f || '').trim(); r.v = n(r.v); r.p = n(r.p);
+        for (const k of ['nf', 'r', 'c', 'm', 've', 't', 'o', 'dp']) r[k] = r[k] == null ? '' : String(r[k]);
+        if (o && canonRow(r) === canonRow(o)) continue;
+        (o ? mudadas : novas).push(r);
+      }
+      const apagadas = [...N.orig.keys()].filter((l) => !ids.has(l));
+      const semNome = [...mudadas, ...novas].find((r) => !r.f);
+      if (semNome) { tab = 'notas'; N.aberta = semNome.l; Object.assign(flt, { q: '', cat: '', st: '', mes: '' }); msg = { text: 'Informe o fornecedor da nota destacada antes de salvar.', err: true }; render(); const el = document.getElementById('nf-f'); if (el) { el.setAttribute('aria-invalid', 'true'); el.focus(); el.scrollIntoView({ block: 'center' }); } return; }
+      if (mudadas.length || novas.length || apagadas.length) {
+        const atual = structuredClone(notas.lotes || []).sort((a, b) => n(a.ordem) - n(b.ordem));
+        const onde = new Map();
+        for (const L of atual) { L.rows ||= []; for (const r of L.rows) onde.set(r.l, L); }
+        const naVersaoAtual = (l) => { const L = onde.get(l); return L ? L.rows.find((x) => x.l === l) : null; };
+        // uma nota que esta pessoa mudou ou excluiu, e que outra pessoa também mudou (ou excluiu) nesse meio-tempo
+        const conflito = [...mudadas.map((r) => r.l), ...apagadas].filter((l) => { const r = naVersaoAtual(l); return r ? canonRow(r) !== canonRow(N.orig.get(l)) : !apagadas.includes(l); });
+        if (conflito.length) {
+          const nomes = [];
+          for (const l of conflito) {
+            const r = naVersaoAtual(l), meuL = N.lotes.find((L) => L.rows.some((x) => x.l === l));
+            nomes.push(descNota(r || N.orig.get(l)));
+            if (r) {
+              if (meuL) meuL.rows[meuL.rows.findIndex((x) => x.l === l)] = structuredClone(r);
+              else (N.lotes.find((L) => L.id === onde.get(l).id) || N.lotes[N.lotes.length - 1]).rows.push(structuredClone(r));
+              N.orig.set(l, structuredClone(r));
+            } else { if (meuL) meuL.rows.splice(meuL.rows.findIndex((x) => x.l === l), 1); N.orig.delete(l); }
+            N.mexidas.delete(l);
+          }
+          tab = 'notas'; N.aberta = null;
+          msg = { text: `${conflito.length === 1 ? 'Uma nota que você mudou foi alterada' : conflito.length + ' notas que você mudou foram alteradas'} por outra pessoa enquanto você editava (${nomes.slice(0, 3).join('; ')}${nomes.length > 3 ? '…' : ''}). Ficou a versão dela; confira e clique em Salvar de novo para gravar o resto.`, err: true };
+          return render();
+        }
+        for (const r of mudadas) { const L = onde.get(r.l); L.rows[L.rows.findIndex((x) => x.l === r.l)] = structuredClone(r); tocados.add(L); antes.push(N.orig.get(r.l)); depois.push(r); }
+        for (const l of apagadas) { const L = onde.get(l); if (!L) continue; const i = L.rows.findIndex((x) => x.l === l); antes.push(L.rows[i]); L.rows.splice(i, 1); tocados.add(L); }
+        let maxL = Math.max(0, ...onde.keys(), ...novas.map((r) => n(r.l)));
+        const usados = new Set(onde.keys());
+        for (const r of novas) {
+          const nova = { ...r, l: usados.has(r.l) ? ++maxL : r.l }; usados.add(nova.l);
+          let L = atual[atual.length - 1];
+          if (!L || L.rows.length >= NOTAS_POR_LOTE) {
+            let ordem = Math.max(0, ...atual.map((x) => n(x.ordem))) + 1;
+            while (atual.some((x) => x.id === 'lote-' + ordem)) ordem++;
+            atual.push(L = { id: 'lote-' + ordem, ordem, rows: [] });
+          }
+          L.rows.push(nova); tocados.add(L); depois.push(nova);
+        }
+        lotesFinal = atual;
+      }
+    }
+    // a obra gravada: o rascunho mais as diferenças que as notas causam nos meses e nas categorias
+    const final = structuredClone(draft);
+    if (lotesFinal) {
+      const r2 = (v) => Math.round(v * 100) / 100;
+      const dm = new Map();
+      const somaMes = (rows, sinal) => { for (const x of mensalDasNotas(rows)) { const d = dm.get(x.mes) || { lancado: 0, pago: 0 }; d.lancado += sinal * x.lancado; d.pago += sinal * x.pago; dm.set(x.mes, d); } };
+      somaMes(depois, 1); somaMes(antes, -1);
+      final.mensal ||= [];
+      for (const [mes, d] of dm) {
+        const dl = r2(d.lancado), dpg = r2(d.pago);
+        if (!dl && !dpg) continue;
+        let row = final.mensal.find((x) => x.mes === mes);
+        if (!row) final.mensal.push(row = { mes, lancado: 0, pago: 0 });
+        row.lancado = r2(n(row.lancado) + dl); row.pago = r2(n(row.pago) + dpg);
+      }
+      final.mensal.sort((a, b) => String(a.mes).localeCompare(String(b.mes)));
+      if ((final.categorias || []).length) {
+        const dc = porCat(depois);
+        for (const [c, v] of porCat(antes)) dc.set(c, (dc.get(c) || 0) - v);
+        for (const [c, v] of dc) {
+          const d = r2(v);
+          if (!d) continue;
+          let row = final.categorias.find((x) => x.nome === c || String(x.nome).startsWith(c + ' ('));
+          if (!row) final.categorias.push(row = { nome: c, valor: 0 });
+          row.valor = r2(n(row.valor) + d);
+        }
+      }
+      const todas = lotesFinal.flatMap((L) => L.rows);
+      const sd = sum(todas.filter((r) => n(r.p) && (r.dpt || !r.dp)), (r) => n(r.p)), sm = sum(todas.filter((r) => !r.m), (r) => n(r.v));
+      const rs = (v) => brlCent(v).replace(/ /g, ' ');
+      const inicio = (/^.*?pelo mês do pagamento\./.exec(final.nota_mensal || '') || [])[0] || 'Notas pelo mês de lançamento, e valor pago pelo mês do pagamento.';
+      final.nota_mensal = inicio + (sd || sm ? ` ${[sd ? rs(sd) + ' pagos sem data' : '', sm ? rs(sm) + ' lançados sem mês' : ''].filter(Boolean).join(' e ')} entram nos totais, mas não no gráfico.` : '');
+    }
+    if ((final.etapas || []).length && !final.curva_fisica.length) {
+      const key = monthKey(today());
+      final.historico = (final.historico || []).filter((x) => x.mes !== key).concat({ mes: key, fisico: Math.round(fisico(final).fr * 10) / 10 }).sort((a, b) => a.mes.localeCompare(b.mes));
+    }
+    final.atualizado_em = new Date().toISOString();
     msg = { text: 'Salvando…', err: false }; render();
-    try { await db.collection('obras').doc(current).set(draft); obras.set(current, draft); draft = null; mode = 'view'; msg = { text: '', err: false }; render(); }
+    try {
+      const docs = [...tocados].map((L) => ({ collection: 'obras/' + current + '/notas', id: L.id, data: { ordem: n(L.ordem), rows: L.rows } }));
+      docs.push({ collection: 'obras', id: current, data: final });
+      if (db.gravarVarios) await db.gravarVarios(docs);
+      else for (const d of docs) await db.collection(d.collection).doc(d.id).set(d.data);
+      if (lotesFinal) { notas.lotes = lotesFinal; notas.rows = lotesFinal.flatMap((L) => L.rows); }
+      Object.assign(flt, { q: '', cat: '', st: '', mes: '' });
+      obras.set(current, final); draft = null; draftOrig = null; nd = null; mode = 'view'; msg = { text: '', err: false }; render();
+    }
     catch (e) { msg = { text: errText(e), err: true }; render(); }
   }
   async function deleteObra() {
-    try { await db.collection('obras').doc(current).delete(); obras.delete(current); draft = null; mode = 'view'; confirmDel = false; go(null); }
+    try {
+      if (db.apagarObra) await db.apagarObra(current);
+      else {
+        if (notas.id !== current || !notas.lotes) { msg = { text: 'As notas desta obra ainda não carregaram. Espere alguns segundos (ou recarregue a página) e tente de novo.', err: true }; confirmDel = false; return render(); }
+        for (const L of notas.lotes) await db.collection('obras/' + current + '/notas').doc(L.id).delete();
+        await db.collection('obras').doc(current).delete();
+      }
+      obras.delete(current); draft = null; nd = null; mode = 'view'; confirmDel = false; go(null);
+    }
     catch (e) { msg = { text: errText(e), err: true }; render(); }
   }
 
+  window.addEventListener('beforeunload', (e) => { if (mudou()) { e.preventDefault(); e.returnValue = ''; } });
   // ---------- navigation ----------
   function go(id) {
     current = id && obras.has(id) ? id : null;

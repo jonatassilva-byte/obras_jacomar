@@ -159,7 +159,19 @@
         },
       };
     }
-    return { collection };
+    const falhou = (error, status) => { console.error('Supabase:', error); return new Error(explicar(error, status).join(': ')); };
+    // grava vários documentos numa única requisição (uma só transação no banco: ou grava tudo, ou nada)
+    async function gravarVarios(docs) {
+      const agora = new Date().toISOString();
+      const { error, status } = await sb.from(TABLE).upsert(docs.map((d) => ({ path: d.collection + '/' + d.id, collection: d.collection, id: d.id, data: d.data, updated_at: agora })));
+      if (error) throw falhou(error, status);
+    }
+    // apaga a obra e todos os lotes de notas dela numa única requisição
+    async function apagarObra(id) {
+      const { error, status } = await sb.from(TABLE).delete().or(`path.eq."obras/${id}",collection.eq."obras/${id}/notas"`);
+      if (error) throw falhou(error, status);
+    }
+    return { collection, gravarVarios, apagarObra };
   }
 
   // ---------- login ----------
